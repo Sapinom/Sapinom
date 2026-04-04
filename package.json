@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "play": "ts-node src/play.ts",
+    "demo": "ts-node src/index.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
