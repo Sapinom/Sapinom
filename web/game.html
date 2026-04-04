@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f0c29">
+<title>Business Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:root{--bg1:#0f0c29;--bg2:#302b63;--bg3:#24243e;--card:rgba(255,255,255,0.07);--card-border:rgba(255,255,255,0.12);--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#448aff;--purple:#b388ff;--text:#f0f0f0;--text2:#aaa;--radius:16px}
+body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));color:var(--text);min-height:100vh;overflow:hidden;position:fixed;width:100%;height:100%}
+.screen{display:none;flex-direction:column;height:100%;width:100%;position:absolute;top:0;left:0}
+.screen.active{display:flex}
+#start-screen{justify-content:center;align-items:center;text-align:center;padding:20px}
+#start-screen h1{font-size:2.5em;background:linear-gradient(90deg,#b388ff,#00e676,#448aff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+#start-screen p{color:var(--text2);font-size:1.1em;margin-bottom:40px}
+#start-screen input{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:16px;font-size:1.1em;color:white;width:80%;max-width:300px;text-align:center;margin-bottom:20px;outline:none}
+#start-screen input::placeholder{color:#666}
+.btn{background:linear-gradient(135deg,#7c4dff,#448aff);border:none;color:white;padding:16px 32px;border-radius:12px;font-size:1.1em;font-weight:600;cursor:pointer;transition:transform .15s,opacity .15s}
+.btn:active{transform:scale(0.95);opacity:0.8}
+.btn.danger{background:linear-gradient(135deg,#ff5252,#ff1744)}
+.btn.success{background:linear-gradient(135deg,#00c853,#00e676)}
+.btn.small{padding:10px 16px;font-size:0.85em;border-radius:10px}
+.btn:disabled{opacity:0.4;pointer-events:none}
+
+/* Game screen layout */
+#game-screen{display:none;flex-direction:column}
+#game-screen.active{display:flex}
+.tab-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:80px;-webkit-overflow-scrolling:touch}
+.tab-content::-webkit-scrollbar{display:none}
+.tab-pane{display:none;animation:fadeIn .3s}
+.tab-pane.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* Bottom tab bar */
+.tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(15,12,41,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--card-border);padding:8px 0;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.tab-bar button{flex:1;background:none;border:none;color:#666;font-size:0.7em;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;cursor:pointer;transition:color .2s}
+.tab-bar button.active{color:var(--blue)}
+.tab-bar button .tab-icon{font-size:1.6em}
+
+/* Cards */
+.card{background:var(--card);backdrop-filter:blur(10px);border:1px solid var(--card-border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.card-header .emoji{font-size:2em}
+.card-header .info{flex:1}
+.card-header .info h3{font-size:1em;margin-bottom:2px}
+.card-header .info span{color:var(--text2);font-size:0.85em}
+
+/* Dashboard */
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.cash{font-size:2em;font-weight:700;color:var(--green)}
+.cash.negative{color:var(--red)}
+.level-badge{background:linear-gradient(135deg,#7c4dff,#b388ff);padding:6px 14px;border-radius:20px;font-size:0.85em;font-weight:600}
+.xp-bar{height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-top:6px}
+.xp-bar .fill{height:100%;background:linear-gradient(90deg,#7c4dff,#b388ff);border-radius:3px;transition:width .5s}
+.weather-strip{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+.weather-big{font-size:3em;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.weather-info{flex:1}
+.weather-info .day{font-size:1.3em;font-weight:600}
+.weather-info .detail{color:var(--text2);font-size:0.9em}
+.eco-strip{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.eco-chip{padding:6px 12px;border-radius:20px;font-size:0.75em;background:var(--card);border:1px solid var(--card-border)}
+.eco-chip.growth{border-color:var(--green);color:var(--green)}
+.eco-chip.recession{border-color:var(--red);color:var(--red)}
+.eco-chip.stable{border-color:var(--yellow);color:var(--yellow)}
+.day-buttons{display:flex;gap:12px;margin-bottom:16px}
+.day-buttons .btn{flex:1;text-align:center}
+.active-events{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.event-badge{padding:5px 10px;border-radius:12px;font-size:0.75em;animation:fadeIn .3s}
+.event-badge.positive{background:rgba(0,230,118,0.15);color:var(--green);border:1px solid rgba(0,230,118,0.3)}
+.event-badge.negative{background:rgba(255,82,82,0.15);color:var(--red);border:1px solid rgba(255,82,82,0.3)}
+.event-badge.neutral{background:rgba(255,215,64,0.15);color:var(--yellow);border:1px solid rgba(255,215,64,0.3)}
+.profit-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--card-border)}
+.profit-line:last-child{border:none}
+.profit-positive{color:var(--green)}
+.profit-negative{color:var(--red)}
+
+/* Toast notification */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-120px);background:rgba(30,30,60,0.95);backdrop-filter:blur(10px);border:1px solid var(--card-border);border-radius:14px;padding:14px 20px;font-size:0.9em;z-index:100;transition:transform .4s cubic-bezier(0.34,1.56,0.64,1);max-width:90%;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.positive{border-color:rgba(0,230,118,0.5)}
+.toast.negative{border-color:rgba(255,82,82,0.5)}
+
+/* Market grid */
+.market-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.market-card{text-align:center;padding:16px 12px}
+.market-card .emoji{font-size:2.5em;display:block;margin-bottom:8px}
+.market-card h3{font-size:0.95em;margin-bottom:4px}
+.market-card .cost{color:var(--yellow);font-weight:600;margin-bottom:4px}
+.market-card .rev{color:var(--text2);font-size:0.8em;margin-bottom:4px}
+.market-card .desc{color:var(--text2);font-size:0.7em;margin-bottom:10px;line-height:1.3}
+.market-card .btn{width:100%;padding:10px}
+
+/* Business detail */
+.biz-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.rep-bar{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-top:6px}
+.rep-bar .fill{height:100%;background:linear-gradient(90deg,var(--yellow),var(--green));border-radius:4px;transition:width .5s}
+.stars{color:var(--yellow);letter-spacing:2px}
+.emp-list{margin-top:8px;font-size:0.8em;color:var(--text2)}
+.price-control{display:flex;align-items:center;gap:10px;margin-top:10px}
+.price-control input[type=range]{flex:1;accent-color:var(--blue)}
+.price-control span{min-width:40px;text-align:center;font-weight:600}
+
+/* Bank */
+.loan-form{margin-top:16px}
+.loan-form label{display:block;color:var(--text2);font-size:0.85em;margin-bottom:6px;margin-top:12px}
+.loan-form input[type=range]{width:100%;accent-color:var(--blue)}
+.loan-preview{background:rgba(68,138,255,0.1);border:1px solid rgba(68,138,255,0.3);border-radius:12px;padding:14px;margin-top:16px;text-align:center}
+.loan-preview .monthly{font-size:1.5em;font-weight:700;color:var(--blue)}
+.debt-indicator{font-size:1.5em;font-weight:700;color:var(--red);text-align:center;margin:16px 0}
+
+/* Events log */
+.event-item{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--card-border)}
+.event-item .event-day{min-width:50px;font-size:0.8em;color:var(--text2)}
+.event-item .event-dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.event-item .event-dot.positive{background:var(--green)}
+.event-item .event-dot.negative{background:var(--red)}
+.event-item .event-dot.neutral{background:var(--yellow)}
+.event-item .event-text{flex:1;font-size:0.9em;line-height:1.4}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-state .emoji{font-size:3em;display:block;margin-bottom:16px}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:50;justify-content:center;align-items:flex-end}
+.modal-overlay.show{display:flex}
+.modal{background:linear-gradient(135deg,#1a1a3e,#24243e);border-radius:20px 20px 0 0;padding:24px;width:100%;max-height:70vh;overflow-y:auto;animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal h2{margin-bottom:16px}
+.modal-close{background:var(--card);border:1px solid var(--card-border);color:white;padding:12px;border-radius:12px;width:100%;margin-top:16px;font-size:1em;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- START SCREEN -->
+<div id="start-screen" class="screen active">
+<h1>Business Simulator</h1>
+<p>Start poor. Build an empire.</p>
+<input id="player-name" type="text" placeholder="Ton nom..." maxlength="20">
+<br><br>
+<button class="btn" onclick="startGame()">Start Game 🚀</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+<div class="tab-content">
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="tab-pane active"></div>
+<!-- BUSINESSES -->
+<div id="tab-businesses" class="tab-pane"></div>
+<!-- MARKET -->
+<div id="tab-market" class="tab-pane"></div>
+<!-- BANK -->
+<div id="tab-bank" class="tab-pane"></div>
+<!-- EVENTS -->
+<div id="tab-events" class="tab-pane"></div>
+</div>
+<div class="tab-bar">
+<button class="active" onclick="switchTab('dashboard',this)"><span class="tab-icon">🏠</span>Home</button>
+<button onclick="switchTab('businesses',this)"><span class="tab-icon">🏢</span>Business</button>
+<button onclick="switchTab('market',this)"><span class="tab-icon">🛒</span>Marche</button>
+<button onclick="switchTab('bank',this)"><span class="tab-icon">🏦</span>Banque</button>
+<button onclick="switchTab('events',this)"><span class="tab-icon">📰</span>Events</button>
+</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- MODAL -->
+<div id="modal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+<div class="modal" id="modal-content"></div>
+</div>
+
+<script>
+// ========== UTILS ==========
+function rand(a,b){return Math.random()*(b-a)+a}
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function chance(p){return Math.random()<p}
+function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v))}
+function lerp(c,t,s){return c+(t-c)*s}
+function vary(base,pct){return base*(1+rand(-pct,pct))}
+function weightedPick(items){let total=items.reduce((s,i)=>s+i.weight,0),r=Math.random()*total;for(let i of items){r-=i.weight;if(r<=0)return i}return items[items.length-1]}
+function fmt(n){return Math.round(n).toLocaleString('fr-FR')}
+
+// ========== DATA ==========
+const WEATHER_EMOJI={sun:'☀️',rain:'🌧️',storm:'⛈️',heatwave:'🔥',snow:'❄️',flood:'🌊',cloudy:'☁️'};
+const SEASON_EMOJI={spring:'🌸',summer:'☀️',autumn:'🍂',winter:'❄️'};
+const SEASON_NAME={spring:'Printemps',summer:'Ete',autumn:'Automne',winter:'Hiver'};
+const WEATHER_NAME={sun:'Soleil',rain:'Pluie',storm:'Orage',heatwave:'Canicule',snow:'Neige',flood:'Inondation',cloudy:'Nuageux'};
+const ECO_EMOJI={growth:'🟢',stable:'🟡',recession:'🔴'};
+const ECO_NAME={growth:'Croissance',stable:'Stable',recession:'Recession'};
+const BIZ_EMOJI={restaurant:'🍽️',boutique:'🛍️',immobilier:'🏠',startup:'💻',food_truck:'🚚',garage:'🔧',hotel:'🏨',ferme:'🌾'};
+const NAMES_FIRST=['Alice','Bob','Clara','David','Emma','Fabien','Gina','Hugo','Iris','Jules','Karine','Leo','Marie','Nathan','Olivia','Paul'];
+const NAMES_LAST=['Martin','Bernard','Dubois','Thomas','Robert','Richard','Petit','Durand','Leroy','Moreau'];
+
+const WEATHER_BY_SEASON={
+spring:[{type:'sun',weight:35},{type:'rain',weight:30},{type:'cloudy',weight:25},{type:'storm',weight:8},{type:'heatwave',weight:2}],
+summer:[{type:'sun',weight:50},{type:'cloudy',weight:15},{type:'rain',weight:10},{type:'heatwave',weight:15},{type:'storm',weight:8},{type:'flood',weight:2}],
+autumn:[{type:'rain',weight:35},{type:'cloudy',weight:25},{type:'sun',weight:20},{type:'storm',weight:12},{type:'flood',weight:5},{type:'snow',weight:3}],
+winter:[{type:'cloudy',weight:25},{type:'snow',weight:25},{type:'rain',weight:20},{type:'sun',weight:15},{type:'storm',weight:10},{type:'flood',weight:3}]
+};
+
+const BIZ_TEMPLATES={
+food_truck:{name:'Food Truck',cost:5000,rev:400,expense:100,maxEmp:3,emoji:'🚚',desc:'Cuisine mobile. Pas cher mais dependant de la meteo.',
+  sens:{sun:2,rain:-1.5,storm:-2,heatwave:.5,snow:-1.8,flood:-2,cloudy:0,spring:1.3,summer:1.8,autumn:.8,winter:.4,consumption:1.3,inflation:1,interestRate:.1,unemployment:.8,rawMaterials:1.8}},
+restaurant:{name:'Restaurant',cost:15000,rev:800,expense:350,maxEmp:15,emoji:'🍽️',desc:'Cuisine et service. Sensible a la meteo et au pouvoir d\'achat.',
+  sens:{sun:1.2,rain:-.8,storm:-1.5,heatwave:-.5,snow:-1,flood:-2,cloudy:0,spring:1,summer:1.3,autumn:.9,winter:.7,consumption:1.5,inflation:1.2,interestRate:.3,unemployment:1,rawMaterials:1.5}},
+boutique:{name:'Boutique',cost:10000,rev:500,expense:200,maxEmp:8,emoji:'🛍️',desc:'Commerce de detail. Sensible aux saisons.',
+  sens:{sun:1,rain:-.5,storm:-1,heatwave:-.3,snow:-.7,flood:-1.5,cloudy:0,spring:1.2,summer:.8,autumn:1.1,winter:1.4,consumption:1.8,inflation:1,interestRate:.2,unemployment:1.3,rawMaterials:.8}},
+startup:{name:'Startup Tech',cost:8000,rev:300,expense:400,maxEmp:20,emoji:'💻',desc:'Innovation. Perd de l\'argent au debut mais fort potentiel.',
+  sens:{sun:0,rain:0,storm:-.2,heatwave:-.1,snow:0,flood:-.5,cloudy:0,spring:1,summer:.9,autumn:1,winter:1,consumption:.5,inflation:.3,interestRate:1.5,unemployment:-.5,rawMaterials:.1}},
+garage:{name:'Garage Auto',cost:12000,rev:600,expense:250,maxEmp:8,emoji:'🔧',desc:'Reparation auto. Stable, boost en hiver.',
+  sens:{sun:.1,rain:.3,storm:.5,heatwave:.3,snow:.8,flood:1,cloudy:0,spring:.9,summer:.8,autumn:1.1,winter:1.3,consumption:.7,inflation:.8,interestRate:.2,unemployment:.5,rawMaterials:1.2}},
+ferme:{name:'Ferme',cost:20000,rev:700,expense:300,maxEmp:12,emoji:'🌾',desc:'Agriculture. Tres dependante de la meteo.',
+  sens:{sun:1.5,rain:.5,storm:-1.5,heatwave:-1.8,snow:-1.5,flood:-2,cloudy:0,spring:1.5,summer:1.2,autumn:1.3,winter:.3,consumption:.8,inflation:.5,interestRate:.3,unemployment:.2,rawMaterials:.5}},
+immobilier:{name:'Agence Immo',cost:25000,rev:1200,expense:500,maxEmp:10,emoji:'🏠',desc:'Achat-vente. Sensible aux taux d\'interet.',
+  sens:{sun:.2,rain:-.1,storm:-.3,heatwave:0,snow:-.2,flood:-1,cloudy:0,spring:1.3,summer:.9,autumn:1,winter:.7,consumption:.8,inflation:.5,interestRate:2,unemployment:1.5,rawMaterials:.3}},
+hotel:{name:'Hotel',cost:50000,rev:2000,expense:1000,maxEmp:25,emoji:'🏨',desc:'Gros investissement mais gros revenus.',
+  sens:{sun:1.5,rain:-.5,storm:-1,heatwave:.3,snow:.8,flood:-1.5,cloudy:0,spring:1.1,summer:1.8,autumn:.7,winter:1.2,consumption:1.5,inflation:.8,interestRate:.5,unemployment:1.2,rawMaterials:.5}}
+};
+
+// ========== EVENTS DATA ==========
+const ALL_EVENTS=[
+// Positive business
+{id:'marketing_success',name:'Campagne marketing reussie',desc:'Votre campagne fait le buzz ! Clients en hausse.',cat:'business',impact:'positive',baseWeight:15,cond:{minDay:10,minCash:500},effects:{revenueMultiplier:1.4,reputationChange:10},dur:7,cd:30},
+{id:'star_employee',name:'Employe performant',desc:'Un employe se revele etre une star !',cat:'business',impact:'positive',baseWeight:12,cond:{minEmp:1},effects:{revenueMultiplier:1.2,moraleChange:10},dur:14,cd:20},
+{id:'subsidy',name:'Subvention obtenue',desc:'Vous recevez une aide publique.',cat:'business',impact:'positive',baseWeight:8,cond:{minDay:30,minBiz:1},effects:{cashChange:3000,reputationChange:5},dur:0,cd:60},
+{id:'buyout_opportunity',name:'Opportunite de rachat',desc:'Un concurrent propose un rachat avantageux.',cat:'business',impact:'positive',baseWeight:5,cond:{minDay:60,minCash:10000,minLevel:3},effects:{cashChangePct:-.15,revenueMultiplier:1.5},dur:30,cd:90},
+{id:'viral_review',name:'Avis viral positif',desc:'Un influenceur publie un avis elogieux !',cat:'business',impact:'positive',baseWeight:10,cond:{minDay:7},effects:{revenueMultiplier:1.3,reputationChange:15},dur:5,cd:25},
+{id:'bulk_order',name:'Commande en gros',desc:'Un gros client passe une commande exceptionnelle.',cat:'business',impact:'positive',baseWeight:10,cond:{minDay:14,minBiz:1},effects:{cashChange:2000},dur:0,cd:15},
+// Negative business
+{id:'employee_quit',name:'Demission',desc:'Un employe cle demissionne.',cat:'business',impact:'negative',baseWeight:12,cond:{minEmp:2},effects:{revenueMultiplier:.85,moraleChange:-10},dur:7,cd:14},
+{id:'strike',name:'Greve',desc:'Vos employes se mettent en greve.',cat:'business',impact:'negative',baseWeight:8,cond:{minEmp:3},effects:{revenueMultiplier:.3,costMultiplier:1.2,moraleChange:-20},dur:5,cd:30},
+{id:'equipment_failure',name:'Panne d\'equipement',desc:'Equipement en panne. Reparation couteuse.',cat:'business',impact:'negative',baseWeight:14,cond:{minDay:5},effects:{cashChange:-1500,revenueMultiplier:.7},dur:3,cd:20},
+{id:'bad_buzz',name:'Bad buzz',desc:'Scandale sur les reseaux sociaux.',cat:'business',impact:'negative',baseWeight:10,cond:{minDay:14},effects:{revenueMultiplier:.6,reputationChange:-20},dur:10,cd:30},
+{id:'tax_audit',name:'Controle fiscal',desc:'L\'administration lance un controle.',cat:'business',impact:'negative',baseWeight:7,cond:{minDay:30,minBiz:1},effects:{cashChangePct:-.08,reputationChange:-5},dur:0,cd:60},
+{id:'theft',name:'Vol',desc:'Cambriolage dans votre etablissement.',cat:'business',impact:'negative',baseWeight:8,cond:{minDay:10},effects:{cashChange:-2000,reputationChange:-5},dur:0,cd:30},
+{id:'logistics_delay',name:'Retard logistique',desc:'Fournisseurs en retard. Production ralentie.',cat:'business',impact:'negative',baseWeight:12,cond:{minDay:7},effects:{revenueMultiplier:.75,costMultiplier:1.1},dur:4,cd:14,bizTypes:['restaurant','boutique','food_truck','ferme']},
+{id:'health_inspection',name:'Controle sanitaire',desc:'Inspecteur sanitaire. Fermeture temporaire.',cat:'business',impact:'negative',baseWeight:6,cond:{minDay:20},effects:{revenueMultiplier:0,cashChange:-800,reputationChange:-10},dur:2,cd:45,bizTypes:['restaurant','food_truck','hotel']},
+// Neutral
+{id:'competitor_opens',name:'Nouveau concurrent',desc:'Un concurrent ouvre dans votre zone.',cat:'business',impact:'neutral',baseWeight:10,cond:{minDay:20},effects:{revenueMultiplier:.9,reputationChange:-3},dur:14,cd:30},
+// Economy
+{id:'economic_boom',name:'Boom economique',desc:'L\'economie est en pleine expansion !',cat:'economy',impact:'positive',baseWeight:8,cond:{minDay:30},effects:{consumptionChange:.2,inflationChange:.01},dur:30,cd:90},
+{id:'recession_evt',name:'Recession',desc:'L\'economie ralentit. Ceintures serrees.',cat:'economy',impact:'negative',baseWeight:6,cond:{minDay:60},effects:{consumptionChange:-.25,inflationChange:-.01},dur:45,cd:120},
+{id:'rate_hike',name:'Hausse des taux',desc:'La banque centrale augmente les taux.',cat:'economy',impact:'negative',baseWeight:7,cond:{minDay:30},effects:{interestRateChange:.02},dur:60,cd:90},
+{id:'rate_cut',name:'Baisse des taux',desc:'La banque centrale baisse les taux.',cat:'economy',impact:'positive',baseWeight:7,cond:{minDay:30},effects:{interestRateChange:-.02},dur:60,cd:90},
+{id:'raw_crisis',name:'Crise des matieres premieres',desc:'Prix des matieres premieres en hausse.',cat:'economy',impact:'negative',baseWeight:5,cond:{minDay:45},effects:{inflationChange:.03,consumptionChange:-.1},dur:30,cd:60},
+{id:'consumer_confidence',name:'Confiance des consommateurs',desc:'Les menages sont optimistes.',cat:'economy',impact:'positive',baseWeight:10,cond:{minDay:14},effects:{consumptionChange:.15},dur:20,cd:40},
+{id:'tax_reform',name:'Reforme fiscale',desc:'Allegement des charges pour les PME.',cat:'economy',impact:'positive',baseWeight:4,cond:{minDay:60},effects:{cashChangePct:.05,consumptionChange:.05},dur:0,cd:120}
+];
+
+// ========== GAME STATE ==========
+let G={
+  player:{name:'',cash:5000,totalEarned:0,totalSpent:0,rep:50,xp:0,level:1,negStreak:0,posStreak:0},
+  businesses:[],
+  loans:[],
+  world:{day:1,season:'spring',dayInSeason:1,weather:'sun',weatherDaysLeft:3,extreme:false,
+    inflation:.02,growth:.03,consumption:1,unemployment:.08,interestRate:.05,taxRate:.25,rawMat:1,
+    ecoCycle:'stable',cycleDaysLeft:90,
+    activeEvents:[],cooldowns:{},lastEventDay:0,eventLog:[]},
+  nextBizId:1,nextEmpId:1,nextLoanId:1
+};
+
+// ========== ENGINES ==========
+function tickSeason(){
+  G.world.dayInSeason++;
+  if(G.world.dayInSeason>30){
+    G.world.dayInSeason=1;
+    const order=['spring','summer','autumn','winter'];
+    const i=order.indexOf(G.world.season);
+    G.world.season=order[(i+1)%4];
+  }
+}
+function tickWeather(){
+  G.world.weatherDaysLeft--;
+  if(G.world.weatherDaysLeft<=0){
+    const opts=WEATHER_BY_SEASON[G.world.season];
+    const pick=weightedPick(opts);
+    G.world.weather=pick.type;
+    const extreme=['storm','heatwave','flood'].includes(pick.type);
+    G.world.extreme=extreme;
+    if(extreme){
+      if(pick.type==='storm')G.world.weatherDaysLeft=randInt(1,3);
+      else if(pick.type==='heatwave')G.world.weatherDaysLeft=randInt(3,7);
+      else G.world.weatherDaysLeft=randInt(2,5);
+    }else{G.world.weatherDaysLeft=randInt(1,4)}
+  }
+}
+function tickEconomy(){
+  let w=G.world;
+  w.cycleDaysLeft--;
+  if(w.cycleDaysLeft<=0){
+    const trans={growth:[{cycle:'growth',weight:30},{cycle:'stable',weight:50},{cycle:'recession',weight:20}],
+      stable:[{cycle:'growth',weight:35},{cycle:'stable',weight:30},{cycle:'recession',weight:35}],
+      recession:[{cycle:'growth',weight:20},{cycle:'stable',weight:50},{cycle:'recession',weight:30}]};
+    w.ecoCycle=weightedPick(trans[w.ecoCycle]).cycle;
+    w.cycleDaysLeft=randInt(60,180);
+  }
+  let infTarget=w.ecoCycle==='growth'?.03:w.ecoCycle==='recession'?.006:.02;
+  w.inflation=clamp(lerp(w.inflation,vary(infTarget,.1),.05),-.03,.1);
+  let conTarget=w.ecoCycle==='growth'?1.2:w.ecoCycle==='recession'?.7:1;
+  conTarget-=(w.unemployment-.08)*2;
+  w.consumption=clamp(lerp(w.consumption,vary(conTarget,.05),.05),.5,1.5);
+  let unTarget=w.ecoCycle==='growth'?.056:w.ecoCycle==='recession'?.144:.08;
+  w.unemployment=clamp(lerp(w.unemployment,vary(unTarget,.05),.025),.03,.25);
+  let irTarget=.05+(w.inflation-.02)*2;
+  if(w.ecoCycle==='recession')irTarget*=.7;
+  w.interestRate=clamp(lerp(w.interestRate,vary(irTarget,.03),.015),.01,.15);
+  w.rawMat=clamp(lerp(w.rawMat,vary(1+w.inflation*3,.05),.04),.5,2);
+  // Apply active economy events
+  for(let e of w.activeEvents){
+    if(e.effects.consumptionChange)w.consumption=clamp(w.consumption+e.effects.consumptionChange*.01,.5,1.5);
+    if(e.effects.inflationChange)w.inflation=clamp(w.inflation+e.effects.inflationChange*.01,-.03,.1);
+    if(e.effects.interestRateChange)w.interestRate=clamp(w.interestRate+e.effects.interestRateChange*.01,.01,.15);
+  }
+}
+
+function tickEvents(){
+  let w=G.world,p=G.player;
+  // Tick active events
+  w.activeEvents=w.activeEvents.filter(e=>{e.daysLeft--;return e.daysLeft>0});
+  // Can trigger?
+  if(w.activeEvents.length>=3)return null;
+  if(w.day-w.lastEventDay<3)return null;
+  if(p.cash<1500&&p.level<=1&&G.world.day<30)return null;
+  // Filter eligible
+  let eligible=ALL_EVENTS.filter(ev=>{
+    if(w.cooldowns[ev.id]&&w.day<w.cooldowns[ev.id])return false;
+    let c=ev.cond;
+    if(c.minDay&&G.world.day<c.minDay)return false;
+    if(c.minLevel&&p.level<c.minLevel)return false;
+    if(c.minBiz&&G.businesses.length<c.minBiz)return false;
+    if(c.minCash&&p.cash<c.minCash)return false;
+    let totalEmp=G.businesses.reduce((s,b)=>s+b.employees.length,0);
+    if(c.minEmp&&totalEmp<c.minEmp)return false;
+    if(ev.bizTypes&&ev.bizTypes.length>0){
+      let types=new Set(G.businesses.map(b=>b.type));
+      if(!ev.bizTypes.some(t=>types.has(t)))return false;
+    }
+    return true;
+  });
+  if(eligible.length===0||!chance(.3))return null;
+  // Balance weights
+  let adjusted=eligible.map(ev=>{
+    let wt=ev.baseWeight;
+    if(p.negStreak>=3&&ev.impact==='positive')wt*=1+.15*p.negStreak;
+    if(p.negStreak>=3&&ev.impact==='negative')wt*=.5;
+    if(p.posStreak>=3&&ev.impact==='positive')wt*=1-.1*p.posStreak;
+    if(p.cash<2500&&ev.impact==='negative'&&(ev.effects.cashChange<0||ev.effects.cashChangePct<0))wt*=.3;
+    return{...ev,weight:Math.max(wt,.1)};
+  });
+  let picked=weightedPick(adjusted);
+  // Apply
+  let targetBizId=null;
+  if(picked.cat==='business'&&G.businesses.length>0){
+    let cands=G.businesses;
+    if(picked.bizTypes)cands=cands.filter(b=>picked.bizTypes.includes(b.type));
+    if(cands.length>0)targetBizId=cands[randInt(0,cands.length-1)].id;
+  }
+  let eff=picked.effects;
+  if(eff.cashChange)p.cash+=eff.cashChange;
+  if(eff.cashChangePct)p.cash+=p.cash*eff.cashChangePct;
+  if(eff.reputationChange)p.rep=clamp(p.rep+eff.reputationChange,0,100);
+  if(picked.impact==='negative'){p.negStreak++;p.posStreak=0}
+  else if(picked.impact==='positive'){p.posStreak++;p.negStreak=0}
+  if(picked.dur>0){
+    w.activeEvents.push({id:picked.id,name:picked.name,daysLeft:picked.dur,effects:{...eff},targetBizId,impact:picked.impact});
+  }
+  w.cooldowns[picked.id]=w.day+picked.cd;
+  w.lastEventDay=w.day;
+  w.eventLog.push({day:w.day,name:picked.name,desc:picked.desc,impact:picked.impact});
+  return picked;
+}
+
+function calcBizDaily(biz){
+  let tmpl=BIZ_TEMPLATES[biz.type],sens=tmpl.sens,w=G.world;
+  let rev=biz.baseRev*(1+(biz.level-1)*.2);
+  // Weather
+  let ws=sens[w.weather]||0;
+  rev*=clamp(1+ws*.1,.1,2);
+  // Season
+  rev*=clamp(sens[w.season]||1,.3,2);
+  // Consumption
+  rev*=clamp(1+(w.consumption-1)*sens.consumption*.5,.3,2);
+  // Unemployment
+  rev*=clamp(1-(w.unemployment-.08)*sens.unemployment,.5,1.3);
+  // Employees
+  if(biz.employees.length>0){
+    let avgP=biz.employees.reduce((s,e)=>s+e.perf,0)/biz.employees.length;
+    let avgM=biz.employees.reduce((s,e)=>s+e.morale,0)/biz.employees.length;
+    rev*=clamp(avgP*(.5+avgM/100),.3,2);
+  }
+  // Reputation
+  rev*=(.5+biz.rep/100);
+  // Price
+  rev*=(1+(biz.price-1)*.6)*(1-(biz.price-1)*.4);
+  // Events
+  let revMult=1,costMult=1;
+  for(let e of w.activeEvents){
+    if(e.targetBizId&&e.targetBizId!==biz.id)continue;
+    if(e.effects.revenueMultiplier)revMult*=e.effects.revenueMultiplier;
+    if(e.effects.costMultiplier)costMult*=e.effects.costMultiplier;
+  }
+  rev*=revMult;
+  rev=vary(rev,.1);
+  rev=Math.max(rev,10);
+  // Costs
+  let cost=biz.baseCost*(1+w.inflation*sens.inflation);
+  cost*=(1+(w.rawMat-1)*sens.rawMaterials*.5);
+  cost+=biz.employees.reduce((s,e)=>s+e.salary/30,0);
+  cost*=costMult;
+  cost=vary(cost,.05);
+  return{rev:Math.round(rev*100)/100,cost:Math.round(cost*100)/100};
+}
+
+function tickBusinesses(){
+  let reports=[];
+  for(let biz of G.businesses){
+    if(!biz.open)continue;
+    biz.days++;
+    let r=calcBizDaily(biz);
+    G.player.cash+=r.rev-r.cost;
+    if(r.rev>0)G.player.totalEarned+=r.rev;
+    G.player.totalSpent+=r.cost;
+    biz.lastRev=r.rev;biz.lastCost=r.cost;
+    reports.push({id:biz.id,name:biz.name,type:biz.type,rev:r.rev,cost:r.cost,profit:r.rev-r.cost});
+    // Employee morale drift
+    for(let emp of biz.employees){
+      emp.daysWorked++;
+      if(chance(.05))emp.morale=clamp(emp.morale+(chance(.6)?1:-1),0,100);
+    }
+    biz.employees=biz.employees.filter(e=>!(e.morale<20&&chance(.015)));
+  }
+  return reports;
+}
+
+function processLoans(){
+  G.loans=G.loans.filter(l=>{
+    if(l.monthsLeft<=0)return false;
+    G.player.cash-=l.monthly;
+    G.player.totalSpent+=l.monthly;
+    l.remaining-=l.monthly-(l.remaining*l.rate/12);
+    l.monthsLeft--;
+    return l.monthsLeft>0&&l.remaining>0;
+  });
+}
+
+function updateXP(reports){
+  let profit=reports.reduce((s,r)=>s+Math.max(r.profit,0),0);
+  G.player.xp+=Math.floor(profit*.1)+reports.length*5;
+  let needed=Math.floor(1000*Math.pow(G.player.level,1.5));
+  if(G.player.xp>=needed){G.player.xp-=needed;G.player.level++}
+}
+
+// ========== GAME TICK ==========
+function gameTick(){
+  tickSeason();tickWeather();tickEconomy();
+  let evt=tickEvents();
+  let reports=tickBusinesses();
+  if(G.world.day%30===0)processLoans();
+  updateXP(reports);
+  G.world.day++;
+  if(evt)showToast(`${evt.impact==='positive'?'✅':'❌'} ${evt.name}`,evt.impact);
+  renderCurrentTab();
+  return{evt,reports};
+}
+
+// ========== PLAYER ACTIONS ==========
+function openBusiness(type,name,city){
+  let t=BIZ_TEMPLATES[type];
+  if(G.player.cash<t.cost)return showToast('Pas assez d\'argent !','negative');
+  G.player.cash-=t.cost;G.player.totalSpent+=t.cost;
+  let biz={id:G.nextBizId++,name:name||t.name,type,level:1,employees:[],baseRev:t.rev,baseCost:t.expense,
+    rep:50,price:1,open:true,days:0,city:city||'Paris',lastRev:0,lastCost:0};
+  G.businesses.push(biz);
+  showToast(`${t.emoji} ${biz.name} ouvert !`,'positive');
+  renderCurrentTab();
+}
+function hireEmployee(bizId){
+  let biz=G.businesses.find(b=>b.id===bizId);
+  if(!biz)return;
+  let t=BIZ_TEMPLATES[biz.type];
+  if(biz.employees.length>=t.maxEmp)return showToast('Equipe au complet !','negative');
+  let salary=Math.round((1+(biz.level-1)*.15)*rand(800,3000));
+  let emp={id:G.nextEmpId++,name:NAMES_FIRST[randInt(0,15)]+' '+NAMES_LAST[randInt(0,9)],
+    salary,perf:Math.round(rand(.5,1.5)*100)/100,morale:randInt(60,90),daysWorked:0};
+  biz.employees.push(emp);
+  showToast(`${emp.name} embauche(e) !`,'positive');
+  renderCurrentTab();
+}
+function upgradeBiz(bizId){
+  let biz=G.businesses.find(b=>b.id===bizId);if(!biz)return;
+  if(biz.level>=10)return showToast('Niveau max atteint !','neutral');
+  let t=BIZ_TEMPLATES[biz.type];
+  let cost=Math.round(t.cost*biz.level*1.5);
+  if(G.player.cash<cost)return showToast(`Il faut ${fmt(cost)}$ !`,'negative');
+  G.player.cash-=cost;G.player.totalSpent+=cost;
+  biz.level++;biz.baseRev=t.rev*(1+(biz.level-1)*.25);
+  showToast(`${t.emoji} Ameliore au niveau ${biz.level} !`,'positive');
+  renderCurrentTab();
+}
+function takeLoan(amount,months){
+  let totalDebt=G.loans.reduce((s,l)=>s+l.remaining,0);
+  let monthlyRev=G.businesses.reduce((s,b)=>s+b.lastRev*30,0);
+  if(monthlyRev>0&&totalDebt+amount>monthlyRev*3)return showToast('Trop endette !','negative');
+  let rate=G.world.interestRate;
+  let mr=rate/12;
+  let monthly=mr>0?(amount*mr)/(1-Math.pow(1+mr,-months)):amount/months;
+  G.loans.push({id:G.nextLoanId++,amount,remaining:amount,rate,monthly:Math.round(monthly*100)/100,
+    monthsLeft:months,totalMonths:months});
+  G.player.cash+=amount;
+  showToast(`Emprunt de ${fmt(amount)}$ accorde !`,'positive');
+  renderCurrentTab();
+}
+
+// ========== UI ==========
+let currentTab='dashboard';
+function switchTab(tab,btn){
+  currentTab=tab;
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderCurrentTab();
+}
+function renderCurrentTab(){
+  switch(currentTab){
+    case'dashboard':renderDashboard();break;
+    case'businesses':renderBusinesses();break;
+    case'market':renderMarket();break;
+    case'bank':renderBank();break;
+    case'events':renderEvents();break;
+  }
+}
+function showToast(msg,type){
+  let t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type||'')+' show';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+function openModal(html){
+  document.getElementById('modal-content').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+
+function renderDashboard(){
+  let p=G.player,w=G.world;
+  let xpNeeded=Math.floor(1000*Math.pow(p.level,1.5));
+  let xpPct=Math.min(100,Math.round(p.xp/xpNeeded*100));
+  let totalProfit=G.businesses.reduce((s,b)=>s+(b.lastRev-b.lastCost),0);
+  let html=`
+    <div class="dash-header">
+      <div><div style="font-size:.85em;color:var(--text2)">${p.name}</div>
+      <div class="cash ${p.cash<0?'negative':''}">${fmt(p.cash)}$</div></div>
+      <div><div class="level-badge">Niv. ${p.level}</div>
+      <div class="xp-bar" style="width:80px;margin-top:6px"><div class="fill" style="width:${xpPct}%"></div></div></div>
+    </div>
+    <div class="weather-strip">
+      <div class="weather-big">${WEATHER_EMOJI[w.weather]||'🌤️'}</div>
+      <div class="weather-info">
+        <div class="day">Jour ${w.day} — ${SEASON_EMOJI[w.season]} ${SEASON_NAME[w.season]}</div>
+        <div class="detail">${WEATHER_NAME[w.weather]||w.weather} ${w.extreme?'(extreme!)':''}</div>
+      </div>
+    </div>
+    <div class="eco-strip">
+      <div class="eco-chip ${w.ecoCycle}">${ECO_EMOJI[w.ecoCycle]} ${ECO_NAME[w.ecoCycle]}</div>
+      <div class="eco-chip">📊 Inflation ${(w.inflation*100).toFixed(1)}%</div>
+      <div class="eco-chip">💰 Conso ${w.consumption.toFixed(2)}</div>
+      <div class="eco-chip">📉 Chomage ${(w.unemployment*100).toFixed(1)}%</div>
+      <div class="eco-chip">🏦 Taux ${(w.interestRate*100).toFixed(1)}%</div>
+    </div>
+    <div class="day-buttons">
+      <button class="btn" onclick="gameTick()">Jour suivant ▶</button>
+      <button class="btn" style="background:linear-gradient(135deg,#6200ea,#7c4dff)" onclick="for(let i=0;i<7;i++)gameTick()">+7 jours ⏩</button>
+    </div>`;
+  if(w.activeEvents.length>0){
+    html+=`<div class="active-events">${w.activeEvents.map(e=>`<span class="event-badge ${e.impact}">${e.name} (${e.daysLeft}j)</span>`).join('')}</div>`;
+  }
+  if(G.businesses.length>0){
+    html+=`<div class="card"><div style="font-weight:600;margin-bottom:8px">📊 Profits du jour</div>`;
+    for(let b of G.businesses){
+      let profit=b.lastRev-b.lastCost;
+      html+=`<div class="profit-line"><span>${BIZ_EMOJI[b.type]} ${b.name}</span><span class="${profit>=0?'profit-positive':'profit-negative'}">${profit>=0?'+':''}${fmt(profit)}$/j</span></div>`;
+    }
+    let tp=G.businesses.reduce((s,b)=>s+(b.lastRev-b.lastCost),0);
+    html+=`<div class="profit-line" style="font-weight:700"><span>Total</span><span class="${tp>=0?'profit-positive':'profit-negative'}">${tp>=0?'+':''}${fmt(tp)}$/j</span></div>`;
+    html+=`</div>`;
+  } else {
+    html+=`<div class="empty-state"><span class="emoji">🚀</span>Ouvre ton premier business dans l'onglet Marche !</div>`;
+  }
+  document.getElementById('tab-dashboard').innerHTML=html;
+}
+
+function renderBusinesses(){
+  if(G.businesses.length===0){
+    document.getElementById('tab-businesses').innerHTML=`<div class="empty-state"><span class="emoji">🏢</span>Aucun business.<br>Va dans Marche pour en ouvrir un !</div>`;
+    return;
+  }
+  let html='<h2 style="margin-bottom:16px">Mes Businesses</h2>';
+  for(let b of G.businesses){
+    let t=BIZ_TEMPLATES[b.type];
+    let profit=b.lastRev-b.lastCost;
+    let stars='⭐'.repeat(Math.min(b.level,5))+(b.level>5?'+':'');
+    html+=`<div class="card">
+      <div class="card-header">
+        <div class="emoji">${t.emoji}</div>
+        <div class="info"><h3>${b.name} <span class="stars">${stars}</span></h3>
+        <span>${t.name} • ${b.city} • Niv.${b.level}</span></div>
+        <span class="${profit>=0?'profit-positive':'profit-negative'}" style="font-weight:700;font-size:1.1em">${profit>=0?'+':''}${fmt(profit)}$</span>
+      </div>
+      <div style="display:flex;gap:12px;font-size:.85em;color:var(--text2);margin-bottom:6px">
+        <span>👥 ${b.employees.length}/${t.maxEmp}</span>
+        <span>📈 Rev: ${fmt(b.lastRev)}$</span>
+        <span>📉 Cout: ${fmt(b.lastCost)}$</span>
+      </div>
+      <div style="font-size:.8em;color:var(--text2);margin-bottom:4px">Reputation: ${b.rep}/100</div>
+      <div class="rep-bar"><div class="fill" style="width:${b.rep}%"></div></div>
+      <div class="price-control">
+        <span style="font-size:.8em">Prix:</span>
+        <input type="range" min="50" max="200" value="${b.price*100}" oninput="setBizPrice(${b.id},this.value)">
+        <span id="price-${b.id}">x${b.price.toFixed(1)}</span>
+      </div>
+      <div class="biz-actions">
+        <button class="btn small success" onclick="hireEmployee(${b.id})">👤+ Embaucher</button>
+        <button class="btn small" onclick="upgradeBiz(${b.id})">⬆️ Ameliorer (${fmt(Math.round(t.cost*b.level*1.5))}$)</button>
+      </div>
+      ${b.employees.length>0?`<div class="emp-list">👥 ${b.employees.map(e=>`${e.name} (⚡${e.perf} 😊${e.morale})`).join(', ')}</div>`:''}
+    </div>`;
+  }
+  document.getElementById('tab-businesses').innerHTML=html;
+}
+function setBizPrice(id,val){
+  let biz=G.businesses.find(b=>b.id===id);if(!biz)return;
+  biz.price=val/100;
+  let el=document.getElementById('price-'+id);
+  if(el)el.textContent='x'+biz.price.toFixed(1);
+}
+
+function renderMarket(){
+  let html='<h2 style="margin-bottom:16px">🛒 Marche</h2><div class="market-grid">';
+  for(let[key,t]of Object.entries(BIZ_TEMPLATES)){
+    let canBuy=G.player.cash>=t.cost;
+    html+=`<div class="card market-card">
+      <span class="emoji">${t.emoji}</span>
+      <h3>${t.name}</h3>
+      <div class="cost">${fmt(t.cost)}$</div>
+      <div class="rev">~${fmt(t.rev)}$/jour</div>
+      <div class="desc">${t.desc}</div>
+      <button class="btn small ${canBuy?'success':''}" ${canBuy?'':`disabled`}
+        onclick="promptBuy('${key}')">Acheter</button>
+    </div>`;
+  }
+  html+='</div>';
+  document.getElementById('tab-market').innerHTML=html;
+}
+function promptBuy(type){
+  let t=BIZ_TEMPLATES[type];
+  openModal(`<h2>${t.emoji} Ouvrir un ${t.name}</h2>
+    <label style="margin-top:12px;display:block;color:var(--text2)">Nom du business:</label>
+    <input id="biz-name-input" type="text" placeholder="${t.name}" style="width:100%;padding:12px;border-radius:10px;background:var(--card);border:1px solid var(--card-border);color:white;margin-top:6px;font-size:1em">
+    <label style="margin-top:12px;display:block;color:var(--text2)">Ville:</label>
+    <input id="biz-city-input" type="text" placeholder="Paris" style="width:100%;padding:12px;border-radius:10px;background:var(--card);border:1px solid var(--card-border);color:white;margin-top:6px;font-size:1em">
+    <button class="btn success" style="width:100%;margin-top:16px" onclick="openBusiness('${type}',document.getElementById('biz-name-input').value,document.getElementById('biz-city-input').value);closeModal()">Confirmer (${fmt(t.cost)}$)</button>
+    <button class="modal-close" onclick="closeModal()">Annuler</button>`);
+}
+
+function renderBank(){
+  let totalDebt=G.loans.reduce((s,l)=>s+l.remaining,0);
+  let html=`<h2 style="margin-bottom:16px">🏦 Banque</h2>
+    <div class="card"><div style="text-align:center;margin-bottom:8px;color:var(--text2)">Dette totale</div>
+    <div class="debt-indicator">${fmt(totalDebt)}$</div></div>`;
+  if(G.loans.length>0){
+    html+='<h3 style="margin:12px 0 8px">Emprunts en cours</h3>';
+    for(let l of G.loans){
+      let pct=Math.round((1-l.monthsLeft/l.totalMonths)*100);
+      html+=`<div class="card">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>${fmt(l.amount)}$ sur ${l.totalMonths} mois</span>
+          <span style="color:var(--text2)">${l.monthsLeft} mois restants</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85em;color:var(--text2);margin-bottom:6px">
+          <span>Mensualite: ${fmt(l.monthly)}$</span><span>Taux: ${(l.rate*100).toFixed(1)}%</span>
+        </div>
+        <div class="rep-bar"><div class="fill" style="width:${pct}%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div>
+      </div>`;
+    }
+  }
+  html+=`<div class="card loan-form">
+    <h3>Nouvel emprunt</h3>
+    <label>Montant: <span id="loan-amt-val">10 000$</span></label>
+    <input type="range" id="loan-amt" min="1000" max="100000" step="1000" value="10000" oninput="updateLoanPreview()">
+    <label>Duree: <span id="loan-dur-val">12 mois</span></label>
+    <input type="range" id="loan-dur" min="6" max="60" step="6" value="12" oninput="updateLoanPreview()">
+    <div class="loan-preview">
+      <div style="color:var(--text2);font-size:.85em;margin-bottom:4px">Mensualite estimee</div>
+      <div class="monthly" id="loan-monthly">0$</div>
+      <div style="color:var(--text2);font-size:.8em;margin-top:4px">Taux actuel: ${(G.world.interestRate*100).toFixed(1)}%</div>
+    </div>
+    <button class="btn" style="width:100%;margin-top:12px" onclick="doLoan()">Emprunter 💰</button>
+  </div>`;
+  document.getElementById('tab-bank').innerHTML=html;
+  updateLoanPreview();
+}
+function updateLoanPreview(){
+  let amt=parseInt(document.getElementById('loan-amt')?.value||10000);
+  let dur=parseInt(document.getElementById('loan-dur')?.value||12);
+  let r=G.world.interestRate/12;
+  let m=r>0?(amt*r)/(1-Math.pow(1+r,-dur)):amt/dur;
+  let av=document.getElementById('loan-amt-val');if(av)av.textContent=fmt(amt)+'$';
+  let dv=document.getElementById('loan-dur-val');if(dv)dv.textContent=dur+' mois';
+  let mv=document.getElementById('loan-monthly');if(mv)mv.textContent=fmt(Math.round(m))+'$/mois';
+}
+function doLoan(){
+  let amt=parseInt(document.getElementById('loan-amt')?.value||10000);
+  let dur=parseInt(document.getElementById('loan-dur')?.value||12);
+  takeLoan(amt,dur);
+}
+
+function renderEvents(){
+  let log=G.world.eventLog;
+  if(log.length===0){
+    document.getElementById('tab-events').innerHTML=`<div class="empty-state"><span class="emoji">📰</span>Aucun evenement pour le moment.<br>Avance quelques jours !</div>`;
+    return;
+  }
+  let html='<h2 style="margin-bottom:16px">📰 Evenements</h2>';
+  for(let i=log.length-1;i>=0;i--){
+    let e=log[i];
+    html+=`<div class="event-item">
+      <div class="event-day">Jour ${e.day}</div>
+      <div class="event-dot ${e.impact}"></div>
+      <div class="event-text"><strong>${e.name}</strong><br><span style="color:var(--text2)">${e.desc}</span></div>
+    </div>`;
+  }
+  document.getElementById('tab-events').innerHTML=html;
+}
+
+// ========== START ==========
+function startGame(){
+  let name=document.getElementById('player-name').value.trim()||'Joueur';
+  G.player.name=name;
+  document.getElementById('start-screen').classList.remove('active');
+  document.getElementById('game-screen').classList.add('active');
+  renderCurrentTab();
+}
+// Init
+document.getElementById('player-name').addEventListener('keydown',e=>{if(e.key==='Enter')startGame()});
+</script>
+</body>
+</html>
