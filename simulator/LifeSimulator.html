@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Life Simulator — Simule tes décisions</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0c29;--card:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.08);--text:#eee;--dim:#888;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#448aff;--purple:#b388ff}
+body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);color:var(--text);min-height:100vh;padding:20px}
+h1{text-align:center;font-size:2em;margin-bottom:4px}
+.sub{text-align:center;color:var(--dim);margin-bottom:30px;font-size:.95em}
+.container{max-width:700px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px}
+.card h2{font-size:1.1em;margin-bottom:14px}
+label{display:block;font-size:.85em;color:var(--dim);margin-bottom:4px;margin-top:12px}
+input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--text);font-size:1em;outline:none}
+input:focus,select:focus{border-color:var(--blue)}
+select{-webkit-appearance:none;appearance:none}
+.row{display:flex;gap:12px}
+.row>*{flex:1}
+.btn{display:block;width:100%;padding:16px;border:none;border-radius:14px;font-size:1.1em;font-weight:800;cursor:pointer;margin-top:20px;transition:transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-cat{background:var(--card);border:2px solid var(--border);color:var(--text);font-size:1em;padding:14px;text-align:left;border-radius:14px;cursor:pointer;margin-bottom:8px;transition:border-color .2s}
+.btn-cat:hover,.btn-cat.active{border-color:var(--blue)}
+.btn-cat .cat-emoji{font-size:1.5em;margin-right:10px}
+.hidden{display:none}
+.result-header{text-align:center;margin-bottom:20px}
+.verdict{font-size:1.3em;font-weight:800;margin:10px 0}
+.verdict.go{color:var(--green)}.verdict.wait{color:var(--yellow)}.verdict.no{color:var(--red)}
+.insight{color:var(--dim);font-size:.95em;line-height:1.5}
+.scenario{border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid var(--border)}
+.scenario.opt{background:rgba(0,230,118,.06);border-color:rgba(0,230,118,.2)}
+.scenario.real{background:rgba(68,138,255,.06);border-color:rgba(68,138,255,.2)}
+.scenario.pess{background:rgba(255,82,82,.06);border-color:rgba(255,82,82,.2)}
+.scenario h3{font-size:1em;margin-bottom:8px}
+.scenario-stats{display:flex;gap:16px;flex-wrap:wrap;font-size:.85em}
+.scenario-stats span{color:var(--dim)}
+.scenario-stats strong{color:var(--text)}
+.score-bar{height:8px;background:rgba(255,255,255,.08);border-radius:4px;margin-top:10px;overflow:hidden}
+.score-fill{height:100%;border-radius:4px;transition:width .8s}
+.timeline{margin-top:10px}
+.tl-row{display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.8em}
+.tl-label{width:50px;color:var(--dim);text-align:right}
+.tl-bar-bg{flex:1;height:14px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden;position:relative}
+.tl-bar{height:100%;border-radius:3px;transition:width .5s;min-width:2px}
+.tl-val{width:70px;text-align:right;font-variant:tabular-nums;font-size:.8em}
+.tl-evt{font-size:.75em;color:var(--yellow);margin-left:4px}
+.risk-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.risk-item:last-child{border:none}
+.risk-emoji{font-size:1.3em}
+.risk-info{flex:1}
+.risk-name{font-size:.9em;font-weight:600}
+.risk-detail{font-size:.8em;color:var(--dim)}
+.risk-prob{font-size:.8em;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.06)}
+.tabs{display:flex;gap:6px;margin-bottom:16px}
+.tab{flex:1;padding:10px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:.85em;font-weight:600;cursor:pointer;text-align:center}
+.tab.active{background:rgba(68,138,255,.12);border-color:var(--blue);color:var(--blue)}
+.back-btn{background:none;border:1px solid var(--border);color:var(--dim);padding:10px 20px;border-radius:10px;cursor:pointer;font-size:.9em;margin-bottom:16px}
+.back-btn:hover{border-color:var(--text);color:var(--text)}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🔮 Life Simulator</h1>
+<p class="sub">Simule tes décisions avant de les prendre</p>
+
+<!-- STEP 1: PROFILE -->
+<div id="step-profile">
+<div class="card">
+<h2>👤 Ton profil financier</h2>
+<div class="row">
+<div><label>Revenu mensuel net (€)</label><input id="income" type="number" value="2200"></div>
+<div><label>Charges mensuelles (€)</label><input id="expenses" type="number" value="1800"></div>
+</div>
+<div class="row">
+<div><label>Épargne totale (€)</label><input id="savings" type="number" value="5000"></div>
+<div><label>Épargne mensuelle (€)</label><input id="monthlySave" type="number" value="400"></div>
+</div>
+<div class="row">
+<div><label>Âge</label><input id="age" type="number" value="23"></div>
+<div><label>Situation</label>
+<select id="situation">
+<option value="salarie">Salarié</option>
+<option value="etudiant">Étudiant</option>
+<option value="freelance">Freelance</option>
+<option value="chomage">Sans emploi</option>
+<option value="entrepreneur">Entrepreneur</option>
+</select></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🎯 Quelle décision veux-tu simuler ?</h2>
+<button class="btn-cat" onclick="pickCategory('voyage')"><span class="cat-emoji">✈️</span> <strong>Voyage</strong> — Partir quelque part avec un budget</button>
+<button class="btn-cat" onclick="pickCategory('achat')"><span class="cat-emoji">🛒</span> <strong>Gros achat</strong> — Voiture, tech, meuble...</button>
+<button class="btn-cat" onclick="pickCategory('carriere')"><span class="cat-emoji">💼</span> <strong>Carrière</strong> — Quitter, freelance, reconversion</button>
+</div>
+</div>
+
+<!-- STEP 2: DECISION PARAMS -->
+<div id="step-params" class="hidden">
+<button class="back-btn" onclick="goBack('profile')">← Retour</button>
+<div class="card" id="params-form"></div>
+<button class="btn btn-primary" onclick="runSimulation()">🔮 Simuler</button>
+</div>
+
+<!-- STEP 3: RESULTS -->
+<div id="step-results" class="hidden">
+<button class="back-btn" onclick="goBack('params')">← Modifier</button>
+<div id="results-content"></div>
+</div>
+</div>
+
+<script>
+// ============ STATE ============
+let currentCategory = '';
+const fmt = n => {
+  if(Math.abs(n)>=1e9)return(n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1)+'M';
+  if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1)+'K';
+  return Math.round(n).toLocaleString('fr-FR');
+};
+
+function getProfile(){
+  return {
+    monthlyIncome:+document.getElementById('income').value||0,
+    monthlyExpenses:+document.getElementById('expenses').value||0,
+    totalSavings:+document.getElementById('savings').value||0,
+    monthlySavings:+document.getElementById('monthlySave').value||0,
+    age:+document.getElementById('age').value||25,
+    situation:document.getElementById('situation').value,
+  };
+}
+
+function show(id){
+  ['step-profile','step-params','step-results'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.getElementById('step-'+id).classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+function goBack(to){show(to)}
+
+function pickCategory(cat){
+  currentCategory=cat;
+  const form=document.getElementById('params-form');
+  if(cat==='voyage'){
+    form.innerHTML=`<h2>✈️ Voyage</h2>
+      <label>Destination</label>
+      <select id="p-dest"><option value="japon">🇯🇵 Japon</option><option value="thailande">🇹🇭 Thaïlande</option><option value="usa">🇺🇸 USA</option><option value="europe">🇪🇺 Europe</option><option value="maroc">🇲🇦 Maroc</option><option value="canada">🇨🇦 Canada</option><option value="australie">🇦🇺 Australie</option><option value="bresil">🇧🇷 Brésil</option></select>
+      <div class="row">
+        <div><label>Durée (jours)</label><input id="p-duration" type="number" value="14"></div>
+        <div><label>Voyageurs</label><input id="p-travelers" type="number" value="1"></div>
+      </div>
+      <label>Style</label>
+      <select id="p-style"><option value="backpacker">🎒 Backpacker</option><option value="standard" selected>🏨 Standard</option><option value="confort">✨ Confort</option><option value="luxe">👑 Luxe</option></select>`;
+  } else if(cat==='achat'){
+    form.innerHTML=`<h2>🛒 Gros Achat</h2>
+      <label>Quoi ?</label><input id="p-item" type="text" placeholder="MacBook Pro, voiture, moto..." value="MacBook Pro">
+      <label>Prix (€)</label><input id="p-price" type="number" value="2000">
+      <label>Paiement</label>
+      <select id="p-credit" onchange="toggleCredit()"><option value="cash">💵 Comptant</option><option value="credit">🏦 À crédit</option></select>
+      <div id="credit-fields" class="hidden">
+        <div class="row">
+          <div><label>Durée crédit (mois)</label><input id="p-creditDur" type="number" value="24"></div>
+          <div><label>Taux annuel (%)</label><input id="p-creditRate" type="number" value="5" step="0.1"></div>
+        </div>
+      </div>
+      <label>Coût mensuel d'utilisation (€) — essence, abo, etc.</label><input id="p-monthlyUse" type="number" value="0">`;
+  } else if(cat==='carriere'){
+    form.innerHTML=`<h2>💼 Carrière</h2>
+      <label>Type de changement</label>
+      <select id="p-carType"><option value="quitter">Quitter mon job</option><option value="freelance">Passer freelance</option><option value="reconversion">Reconversion</option><option value="negociation">Négocier une augmentation</option></select>
+      <div class="row">
+        <div><label>Salaire actuel (€/mois)</label><input id="p-curSalary" type="number" value="2200"></div>
+        <div><label>Revenu espéré (€/mois)</label><input id="p-expIncome" type="number" value="3000"></div>
+      </div>
+      <div class="row">
+        <div><label>Mois de transition sans revenu</label><input id="p-transMo" type="number" value="3"></div>
+        <div><label>Coût formation (€)</label><input id="p-formCost" type="number" value="0"></div>
+      </div>`;
+  }
+  show('params');
+}
+function toggleCredit(){
+  document.getElementById('credit-fields').classList.toggle('hidden',document.getElementById('p-credit').value==='cash');
+}
+
+// ============ COST DATA ============
+const DAILY_COSTS={japon:{backpacker:50,standard:100,confort:180,luxe:350},thailande:{backpacker:25,standard:50,confort:100,luxe:200},usa:{backpacker:60,standard:120,confort:200,luxe:400},europe:{backpacker:40,standard:80,confort:150,luxe:300},maroc:{backpacker:20,standard:40,confort:80,luxe:160},canada:{backpacker:55,standard:110,confort:190,luxe:380},australie:{backpacker:55,standard:110,confort:200,luxe:400},bresil:{backpacker:30,standard:60,confort:120,luxe:250}};
+const FLIGHTS={japon:700,thailande:550,usa:500,europe:150,maroc:150,canada:450,australie:900,bresil:600};
+
+// ============ SIMULATION ============
+function runSimulation(){
+  const p=getProfile();
+  let result;
+  if(currentCategory==='voyage') result=simVoyage(p);
+  else if(currentCategory==='achat') result=simAchat(p);
+  else result=simCarriere(p);
+  renderResult(result);
+  show('results');
+}
+
+function simVoyage(p){
+  const dest=document.getElementById('p-dest').value;
+  const dur=+document.getElementById('p-duration').value;
+  const trav=+document.getElementById('p-travelers').value;
+  const style=document.getElementById('p-style').value;
+  const daily=(DAILY_COSTS[dest]||DAILY_COSTS.japon)[style]*trav;
+  const flight=(FLIGHTS[dest]||400)*trav;
+  const base=daily*dur+flight;
+  const visa=['japon','usa','australie'].includes(dest)?50*trav:0;
+  const insurance=Math.ceil(dur/7)*15*trav;
+  const costs={opt:Math.round(base*.85+visa+insurance),real:Math.round(base*1.05+visa+insurance),pess:Math.round(base*1.3+visa+insurance+200*trav)};
+
+  function timeline(cost){
+    const tl=[];let sav=p.totalSavings;
+    for(let m=0;m<10;m++){
+      if(m<3){sav+=p.monthlySavings;tl.push({month:m,label:'M-'+(3-m),savings:sav,balance:p.monthlySavings,event:m===0?'Préparation':null})}
+      else if(m===3){sav-=cost;tl.push({month:m,label:'✈️ Voyage',savings:sav,balance:-cost,event:dest+' ('+dur+'j)'})}
+      else{sav+=p.monthlySavings;tl.push({month:m,label:'M+'+(m-3),savings:sav,balance:p.monthlySavings})}
+    }
+    return tl;
+  }
+  function scenario(name,emoji,prob,cost){
+    const tl=timeline(cost);
+    const ratio=cost/p.totalSavings;
+    let score=ratio<.2?95:ratio<.4?80:ratio<.6?60:ratio<.8?40:ratio<1?20:5;
+    const recover=p.monthlySavings>0?Math.ceil(cost/p.monthlySavings):999;
+    let verdict=score>=80?'Largement dans tes moyens !':score>=60?'Faisable, ça se sentira un peu.':score>=40?'Serré. Faudra faire attention après.':score>=20?'Risqué pour ton épargne.':'Très difficile.';
+    return{name,emoji,prob,tl,cost,recover,score,verdict};
+  }
+  const scenarios={opt:scenario('Optimiste','🌟',.2,costs.opt),real:scenario('Réaliste','📊',.6,costs.real),pess:scenario('Pessimiste','⚠️',.2,costs.pess)};
+  const score=scenarios.real.score;
+  let reco,recoText;
+  if(score>=60){reco='go';recoText=`Tu peux y aller ! Coût réaliste : ${fmt(costs.real)}€. Tu récupères en ${scenarios.real.recover} mois.`}
+  else if(score>=30){const mo=Math.max(2,Math.ceil((costs.real*.7-p.totalSavings)/p.monthlySavings));reco='wait';recoText=`Attends ${mo} mois de plus, ou réduis à ${Math.floor(dur*.7)} jours.`}
+  else{reco='no';recoText=`Trop serré. Il te faudrait ${fmt(Math.round(costs.real*.7))}€ d'épargne.`}
+  return{
+    decision:`Voyage ${dest} — ${dur} jours (${style})`,scenarios,
+    risks:[
+      {name:'Dépenses imprévues',emoji:'💸',prob:60,impact:'+15-30% du budget',sev:'medium'},
+      {name:'Problème de santé',emoji:'🏥',prob:5,impact:'Frais médicaux',sev:'high'},
+      {name:'Vol / perte',emoji:'🦹',prob:10,impact:'200-500€ de remplacement',sev:'medium'},
+      {name:'Taux de change',emoji:'💱',prob:30,impact:'+5-10% sur tout',sev:'low'},
+    ],
+    insight:`Ce voyage coûte entre ${fmt(costs.opt)}€ et ${fmt(costs.pess)}€, soit ${Math.round(costs.real/p.monthlyIncome*100)}% de ton salaire mensuel.`,
+    reco,recoText
+  };
+}
+
+function simAchat(p){
+  const item=document.getElementById('p-item').value||'Achat';
+  const price=+document.getElementById('p-price').value;
+  const credit=document.getElementById('p-credit').value==='credit';
+  const dur=+document.getElementById('p-creditDur')?.value||24;
+  const rate=(+document.getElementById('p-creditRate')?.value||5)/100;
+  const monthlyUse=+document.getElementById('p-monthlyUse')?.value||0;
+  let monthly=0,totalCredit=price;
+  if(credit){const mr=rate/12;monthly=mr>0?(price*mr)/(1-Math.pow(1+mr,-dur)):price/dur;monthly=Math.round(monthly);totalCredit=monthly*dur}
+  function timeline(mult){
+    const tl=[];let sav=p.totalSavings;
+    for(let m=0;m<Math.min(credit?dur+6:12,24);m++){
+      if(m===0&&!credit){sav-=price*mult;tl.push({month:m,label:'Achat',savings:sav,balance:-(price*mult),event:'Achat '+item})}
+      else{const mc=(credit?monthly*mult:0)+monthlyUse*mult;sav+=p.monthlySavings-mc;tl.push({month:m,label:'M+'+m,savings:sav,balance:p.monthlySavings-mc})}
+    }
+    return tl;
+  }
+  function scenario(name,emoji,prob,mult){
+    const tl=timeline(mult);
+    const cost=credit?Math.round(totalCredit*mult+monthlyUse*12*mult):Math.round(price*mult+monthlyUse*12*mult);
+    const mc=(credit?monthly*mult:0)+monthlyUse*mult;
+    const ratio=credit?mc/p.monthlyIncome:price*mult/p.totalSavings;
+    let score=credit?(ratio<.1?90:ratio<.2?70:ratio<.3?50:ratio<.4?30:10):(ratio<.2?95:ratio<.4?75:ratio<.6?55:ratio<.8?30:10);
+    const recover=p.monthlySavings>0?Math.ceil((credit?0:price*mult)/p.monthlySavings):999;
+    let verdict=score>=80?'Achat confortable.':score>=60?'Impact modéré.':score>=40?'Ça va se sentir.':'Impact lourd.';
+    return{name,emoji,prob,tl,cost,recover,score,verdict,monthly:Math.round(mc)};
+  }
+  const scenarios={opt:scenario('Optimiste','🌟',.2,.9),real:scenario('Réaliste','📊',.6,1),pess:scenario('Pessimiste','⚠️',.2,1.15)};
+  const score=scenarios.real.score;
+  let reco,recoText;
+  if(score>=60){reco='go';recoText=credit?`Faisable. ${monthly}€/mois pendant ${dur} mois (total: ${fmt(totalCredit)}€, intérêts: ${fmt(totalCredit-price)}€).`:`Tu peux. Il te restera ${fmt(p.totalSavings-price)}€ d'épargne.`}
+  else if(score>=30){reco='wait';recoText='Épargne encore un peu ou cherche moins cher.'}
+  else{reco='no';recoText='Trop lourd pour ton budget.'}
+  return{
+    decision:`Acheter ${item} (${fmt(price)}€${credit?' à crédit':''})`,scenarios,
+    risks:[{name:'Frais cachés',emoji:'💸',prob:40,impact:'+5-15%',sev:'medium'},{name:'Panne / réparation',emoji:'🔧',prob:20,impact:'Frais imprévus',sev:'medium'},...(credit?[{name:'Hausse des taux',emoji:'📈',prob:15,impact:'Mensualités plus élevées',sev:'low'}]:[]),...(price>5000?[{name:'Dépréciation',emoji:'📉',prob:70,impact:'Perte de valeur',sev:'medium'}]:[])],
+    insight:credit?`${monthly}€/mois pendant ${dur} mois = ${Math.round(monthly/p.monthlyIncome*100)}% de ton revenu.`:`${fmt(price)}€ = ${Math.round(price/p.totalSavings*100)}% de ton épargne.`,
+    reco,recoText
+  };
+}
+
+function simCarriere(p){
+  const type=document.getElementById('p-carType').value;
+  const curSal=+document.getElementById('p-curSalary').value;
+  const expInc=+document.getElementById('p-expIncome').value;
+  const transMo=+document.getElementById('p-transMo').value;
+  const formCost=+document.getElementById('p-formCost').value;
+  function timeline(incRatio,extraMo){
+    const tl=[];let sav=p.totalSavings;const tt=transMo+extraMo;
+    for(let m=0;m<18;m++){
+      let inc;
+      if(m<tt)inc=type==='negociation'?curSal:0;
+      else if(m<tt+3)inc=expInc*incRatio*.5;
+      else inc=expInc*incRatio;
+      if(m===0)sav-=formCost;
+      const bal=inc-p.monthlyExpenses;sav+=bal;
+      let event=null;
+      if(m===0)event=type==='quitter'?'Démission':type==='freelance'?'Lancement':type==='reconversion'?'Formation':'Négociation';
+      if(m===tt)event='Premiers revenus';
+      if(m===tt+3)event='Vitesse de croisière';
+      tl.push({month:m,label:'M+'+m,savings:sav,balance:Math.round(bal),event});
+    }
+    return tl;
+  }
+  function scenario(name,emoji,prob,incRatio,extraMo){
+    const tl=timeline(incRatio,extraMo);
+    const tt=transMo+extraMo;
+    const cost=curSal*tt+formCost;
+    const finalInc=expInc*incRatio;
+    const diff=finalInc-curSal;
+    let score=diff>curSal*.3?90:diff>curSal*.1?75:diff>=0?60:diff>-curSal*.2?40:20;
+    if(tt>6)score-=15;
+    const cushion=p.totalSavings/p.monthlyExpenses;
+    if(cushion<tt)score-=20;
+    score=Math.max(5,Math.min(95,score));
+    const recover=diff>0?Math.ceil(cost/diff):999;
+    let verdict=score>=75?'Bon move !':score>=55?'Faisable mais prépare-toi.':score>=35?'Risqué. Filet de sécurité nécessaire.':'Très risqué.';
+    return{name,emoji,prob,tl,cost,recover,score,verdict};
+  }
+  const scenarios={opt:scenario('Optimiste','🌟',.2,1.3,0),real:scenario('Réaliste','📊',.55,1,1),pess:scenario('Pessimiste','⚠️',.25,.7,3)};
+  const cushion=Math.round(p.totalSavings/p.monthlyExpenses);
+  const score=scenarios.real.score;
+  const canAfford=cushion>=transMo+3;
+  let reco,recoText;
+  if(score>=60&&canAfford){reco='go';recoText=`Tu as ${cushion} mois de réserve. Assez pour la transition. Revenu espéré : ${fmt(expInc)}€/mois.`}
+  else if(score>=35){const mo=Math.max(3,Math.ceil((p.monthlyExpenses*(transMo+3)-p.totalSavings)/p.monthlySavings));reco='wait';recoText=`Épargne encore ${mo} mois pour avoir ${transMo+3} mois de charges en réserve.`}
+  else{reco='no';recoText=`Trop risqué. Tu n'as que ${cushion} mois de réserve, il en faudrait ${transMo+3}.`}
+  const typeLabel={quitter:'Quitter son job',freelance:'Passer freelance',reconversion:'Se reconvertir',negociation:'Négocier'}[type];
+  return{
+    decision:typeLabel,scenarios,
+    risks:[{name:'Transition plus longue',emoji:'⏳',prob:40,impact:`${transMo+2}-${transMo+4} mois sans revenu`,sev:'high'},{name:'Revenus inférieurs',emoji:'📉',prob:30,impact:'-20-30% vs attentes',sev:'high'},{name:'Stress / burnout',emoji:'😰',prob:25,impact:'Impact santé',sev:'medium'},{name:'Retour en arrière',emoji:'↩️',prob:15,impact:'Retour au salariat',sev:'low'}],
+    insight:`Tu as ${cushion} mois de réserve. La transition prendra ${transMo}-${transMo+3} mois.`,
+    reco,recoText
+  };
+}
+
+// ============ RENDER RESULTS ============
+function renderResult(r){
+  const el=document.getElementById('results-content');
+  const recoEmoji=r.reco==='go'?'✅':r.reco==='wait'?'⏳':'❌';
+  const recoClass=r.reco;
+
+  // Find max savings for bar scaling
+  const allSavings=Object.values(r.scenarios).flatMap(s=>s.tl.map(t=>t.savings));
+  const maxSav=Math.max(...allSavings.map(Math.abs),1);
+
+  let html=`
+    <div class="result-header">
+      <div style="font-size:.9em;color:var(--dim)">${r.decision}</div>
+      <div class="verdict ${recoClass}">${recoEmoji} ${r.recoText}</div>
+      <div class="insight">💡 ${r.insight}</div>
+    </div>`;
+
+  // Scenarios
+  const scenarioData=[
+    {key:'opt',data:r.scenarios.opt,cls:'opt'},
+    {key:'real',data:r.scenarios.real,cls:'real'},
+    {key:'pess',data:r.scenarios.pess,cls:'pess'},
+  ];
+
+  for(const{data:s,cls}of scenarioData){
+    const scoreColor=s.score>=70?'var(--green)':s.score>=40?'var(--yellow)':'var(--red)';
+    html+=`<div class="scenario ${cls}">
+      <h3>${s.emoji} ${s.name} <span style="color:var(--dim);font-weight:400">(${Math.round(s.prob*100)}% de chances)</span></h3>
+      <div class="scenario-stats">
+        <span>Coût: <strong>${fmt(s.cost)}€</strong></span>
+        <span>Épargne après: <strong>${fmt(s.tl[s.tl.length-1]?.savings||0)}€</strong></span>
+        <span>Récup: <strong>${s.recover} mois</strong></span>
+        <span>Score: <strong style="color:${scoreColor}">${s.score}/100</strong></span>
+      </div>
+      <div class="score-bar"><div class="score-fill" style="width:${s.score}%;background:${scoreColor}"></div></div>
+      <div style="font-size:.85em;color:var(--dim);margin-top:6px">${s.verdict}</div>
+
+      <div class="timeline" style="margin-top:12px">`;
+
+    for(const t of s.tl){
+      const pct=Math.max(2,Math.round(Math.abs(t.savings)/maxSav*100));
+      const color=t.savings>=0?'var(--blue)':'var(--red)';
+      html+=`<div class="tl-row">
+        <div class="tl-label">${t.label}</div>
+        <div class="tl-bar-bg"><div class="tl-bar" style="width:${pct}%;background:${color}"></div></div>
+        <div class="tl-val" style="color:${t.savings>=0?'var(--text)':'var(--red)'}">${fmt(t.savings)}€</div>
+        ${t.event?`<div class="tl-evt">${t.event}</div>`:''}
+      </div>`;
+    }
+    html+=`</div></div>`;
+  }
+
+  // Risks
+  html+=`<div class="card"><h2>⚠️ Risques identifiés</h2>`;
+  for(const risk of r.risks){
+    const sevColor=risk.sev==='high'?'var(--red)':risk.sev==='medium'?'var(--yellow)':'var(--dim)';
+    html+=`<div class="risk-item">
+      <div class="risk-emoji">${risk.emoji}</div>
+      <div class="risk-info"><div class="risk-name">${risk.name}</div><div class="risk-detail">${risk.impact}</div></div>
+      <div class="risk-prob" style="color:${sevColor}">${risk.prob}%</div>
+    </div>`;
+  }
+  html+=`</div>`;
+
+  // New simulation button
+  html+=`<button class="btn btn-primary" onclick="show('profile')" style="margin-top:8px">🔮 Nouvelle simulation</button>`;
+
+  el.innerHTML=html;
+}
+</script>
+</body>
+</html>
