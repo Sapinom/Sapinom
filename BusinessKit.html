@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BusinessKit — Crée ton business</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a1a;--card:rgba(255,255,255,0.04);--border:rgba(255,255,255,0.08);--text:#eee;--dim:#777;--green:#00e676;--red:#ff5252;--yellow:#ffd740;--blue:#448aff;--purple:#b388ff;--orange:#ff9100;--cyan:#00e5ff}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.8em;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:var(--dim);margin-bottom:24px}
+/* Nav */
+.nav{display:flex;gap:4px;margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:14px;padding:4px}
+.nav button{flex:1;padding:12px 8px;border:none;border-radius:12px;background:transparent;color:var(--dim);font-size:.85em;font-weight:700;cursor:pointer;transition:all .2s}
+.nav button.active{background:var(--blue);color:#fff}
+.nav button:hover:not(.active){background:rgba(255,255,255,0.05)}
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:14px}
+.card h2{font-size:1.1em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3{font-size:.95em;margin-bottom:8px;color:var(--dim)}
+/* Forms */
+label{display:block;font-size:.8em;color:var(--dim);margin-bottom:4px;margin-top:10px}
+input,textarea,select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:.95em;font-family:inherit;outline:none;resize:vertical}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)}
+textarea{min-height:60px}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+.btn{display:inline-block;padding:12px 24px;border:none;border-radius:12px;font-size:.95em;font-weight:700;cursor:pointer;transition:transform .1s}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--blue);color:#fff;width:100%;text-align:center}
+.btn-sm{padding:8px 16px;font-size:.8em;border-radius:8px}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--dim)}
+.btn-green{background:var(--green);color:#000}
+.btn-orange{background:var(--orange);color:#000}
+.hidden{display:none}
+/* Canvas */
+.canvas-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.canvas-cell{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:14px;min-height:100px}
+.canvas-cell.wide{grid-column:span 3}
+.canvas-cell.mid{grid-column:span 2}
+.canvas-cell h4{font-size:.8em;color:var(--dim);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.canvas-cell p{font-size:.9em;line-height:1.5;white-space:pre-wrap}
+.canvas-cell.empty p{color:var(--dim);font-style:italic}
+/* Tags */
+.tag{display:inline-block;padding:4px 10px;border-radius:8px;font-size:.75em;font-weight:600;margin:2px}
+.tag-blue{background:rgba(68,138,255,.15);color:var(--blue)}
+.tag-green{background:rgba(0,230,118,.15);color:var(--green)}
+.tag-orange{background:rgba(255,145,0,.15);color:var(--orange)}
+.tag-purple{background:rgba(179,136,255,.15);color:var(--purple)}
+.tag-red{background:rgba(255,82,82,.15);color:var(--red)}
+.tag-cyan{background:rgba(0,229,255,.15);color:var(--cyan)}
+/* Strategy sections */
+.strat-section{margin-bottom:16px}
+.strat-section h3{font-size:.95em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.strat-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.strat-item:last-child{border:none}
+.strat-icon{font-size:1.3em;width:30px;text-align:center}
+.strat-content{flex:1}
+.strat-title{font-weight:700;font-size:.9em}
+.strat-desc{font-size:.8em;color:var(--dim);margin-top:2px;line-height:1.4}
+/* Chart */
+.chart{display:flex;align-items:flex-end;gap:6px;height:150px;padding:10px 0;border-bottom:1px solid var(--border)}
+.chart-bar{flex:1;border-radius:4px 4px 0 0;min-width:20px;position:relative;transition:height .5s}
+.chart-label{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);font-size:.65em;color:var(--dim);white-space:nowrap}
+.chart-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:.7em;font-weight:700}
+/* Score */
+.score-ring{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.3em;font-weight:900;margin:0 auto 10px}
+.score-label{text-align:center;font-size:.85em;color:var(--dim)}
+/* Calendar */
+.cal-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.cal-day{font-size:.75em;color:var(--dim);width:30px;text-align:right}
+.cal-bar{flex:1;height:28px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:.75em;font-weight:600}
+/* Metrics */
+.metric{text-align:center;padding:12px}
+.metric-val{font-size:1.5em;font-weight:900}
+.metric-label{font-size:.75em;color:var(--dim);margin-top:2px}
+/* Pane */
+.pane{display:none}
+.pane.active{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>⚡ BusinessKit</h1>
+<p class="sub">Crée ton business model + stratégie marketing</p>
+
+<div class="nav">
+<button class="active" onclick="showPane('model',this)">📋 Business Model</button>
+<button onclick="showPane('marketing',this)">📣 Marketing</button>
+<button onclick="showPane('projections',this)">📊 Projections</button>
+</div>
+
+<!-- ==================== BUSINESS MODEL ==================== -->
+<div id="pane-model" class="pane active">
+<div class="card">
+<h2>🎯 Ton idée de business</h2>
+<label>Nom du projet</label>
+<input id="bm-name" value="QuickHelp" placeholder="Ex: QuickHelp, FixIt, LocalHero...">
+<label>En une phrase, c'est quoi ?</label>
+<textarea id="bm-pitch" placeholder="Ex: Une app qui connecte les gens qui ont besoin d'aide avec des personnes disponibles dans leur quartier">Une app qui connecte les gens qui ont besoin d'aide (ménage, montage meuble, courses, bricolage) avec des personnes disponibles dans leur quartier. Commission de 15% sur chaque service.</textarea>
+</div>
+
+<div class="card">
+<h2>👥 Tes clients</h2>
+<div class="row">
+<div>
+<label>Client type (demandeur)</label>
+<input id="bm-client1" value="25-45 ans, urbain, actif, manque de temps" placeholder="Qui a besoin de ton service ?">
+</div>
+<div>
+<label>Client type (prestataire)</label>
+<input id="bm-client2" value="18-35 ans, étudiant ou freelance, cherche un revenu complémentaire" placeholder="Qui fournit le service ?">
+</div>
+</div>
+<label>Taille du marché (ta ville)</label>
+<select id="bm-market">
+<option value="small">Petite ville (< 100K hab)</option>
+<option value="medium" selected>Ville moyenne (100-500K hab)</option>
+<option value="large">Grande ville (500K+ hab)</option>
+<option value="paris">Paris / Île-de-France</option>
+</select>
+</div>
+
+<div class="card">
+<h2>💰 Comment tu gagnes de l'argent</h2>
+<label>Modèle de revenus</label>
+<select id="bm-revenue">
+<option value="commission" selected>Commission sur chaque transaction</option>
+<option value="abo">Abonnement mensuel</option>
+<option value="freemium">Freemium (gratuit + premium)</option>
+<option value="pub">Publicité</option>
+<option value="vente">Vente directe</option>
+</select>
+<div class="row">
+<div><label>Prix moyen par transaction (€)</label><input id="bm-price" type="number" value="35"></div>
+<div><label>Commission / marge (%)</label><input id="bm-commission" type="number" value="15"></div>
+</div>
+</div>
+
+<div class="card">
+<h2>🏗️ Tes coûts</h2>
+<div class="row">
+<div><label>Coût de lancement (€)</label><input id="bm-launchCost" type="number" value="500"></div>
+<div><label>Coûts mensuels fixes (€)</label><input id="bm-monthlyCost" type="number" value="100"></div>
+</div>
+<label>Principaux postes de dépense</label>
+<textarea id="bm-costs" placeholder="Hébergement, marketing, design...">Hébergement serveur, nom de domaine, publicité Instagram/Facebook, flyers locaux</textarea>
+</div>
+
+<div class="card">
+<h2>⚔️ Concurrence</h2>
+<label>Concurrents directs</label>
+<textarea id="bm-competitors" placeholder="Qui fait déjà ça ?">TaskRabbit (pas en France), AlloVoisins (peu actif), LeBonCoin services (pas spécialisé)</textarea>
+<label>Ton avantage compétitif</label>
+<textarea id="bm-advantage" placeholder="Pourquoi toi et pas eux ?">Ultra-local (quartier par quartier), vérification d'identité, système de notation fiable, paiement sécurisé intégré</textarea>
+</div>
+
+<button class="btn btn-primary" onclick="generateAll()">⚡ Générer Business Model + Marketing</button>
+</div>
+
+<!-- ==================== MARKETING ==================== -->
+<div id="pane-marketing" class="pane"></div>
+
+<!-- ==================== PROJECTIONS ==================== -->
+<div id="pane-projections" class="pane"></div>
+
+</div>
+<script>
+// ============ NAV ============
+function showPane(id,btn){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+}
+
+const fmt=n=>{if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.round(n).toLocaleString('fr-FR')};
+
+// ============ GENERATE ALL ============
+function generateAll(){
+  const data=getFormData();
+  generateMarketing(data);
+  generateProjections(data);
+  showPane('marketing',document.querySelectorAll('.nav button')[1]);
+}
+
+function getFormData(){
+  return{
+    name:document.getElementById('bm-name').value||'Mon Business',
+    pitch:document.getElementById('bm-pitch').value,
+    client1:document.getElementById('bm-client1').value,
+    client2:document.getElementById('bm-client2').value,
+    market:document.getElementById('bm-market').value,
+    revenueModel:document.getElementById('bm-revenue').value,
+    price:+document.getElementById('bm-price').value||30,
+    commission:+document.getElementById('bm-commission').value||15,
+    launchCost:+document.getElementById('bm-launchCost').value||500,
+    monthlyCost:+document.getElementById('bm-monthlyCost').value||100,
+    costs:document.getElementById('bm-costs').value,
+    competitors:document.getElementById('bm-competitors').value,
+    advantage:document.getElementById('bm-advantage').value,
+  };
+}
+
+// ============ MARKETING GENERATOR ============
+function generateMarketing(d){
+  const revPerTx=d.price*d.commission/100;
+  const marketSizes={small:50000,medium:200000,large:600000,paris:2000000};
+  const pop=marketSizes[d.market];
+  const targetPct=d.market==='paris'?.005:.01;
+  const targetUsers=Math.round(pop*targetPct);
+
+  // Channels based on business type
+  const channels=[
+    {name:'Instagram / TikTok',emoji:'📱',budget:40,reach:'Élevée',desc:`Posts quotidiens, Reels de services réalisés, témoignages clients. Cible: ${d.client1.split(',')[0]}.`,priority:'high'},
+    {name:'Flyers & QR codes',emoji:'📄',budget:15,reach:'Locale',desc:`Distribution dans les commerces de quartier, boîtes aux lettres, cafés. QR code vers l'app.`,priority:'high'},
+    {name:'Bouche à oreille',emoji:'🗣️',budget:5,reach:'Organique',desc:`Programme de parrainage: 5€ offerts au parrain et au filleul. Viralité locale.`,priority:'high'},
+    {name:'Facebook Ads',emoji:'📘',budget:25,reach:'Ciblée',desc:`Publicités géolocalisées par quartier. Retargeting des visiteurs du site. Budget: 5-10€/jour.`,priority:'medium'},
+    {name:'Google Maps / SEO local',emoji:'🗺️',budget:5,reach:'Intentionnelle',desc:`Fiche Google Business, SEO sur "aide ménage + ville", "bricolage + quartier".`,priority:'medium'},
+    {name:'Partenariats locaux',emoji:'🤝',budget:10,reach:'Ciblée',desc:`Partenariats avec commerces de proximité, résidences étudiantes, coworking.`,priority:'low'},
+  ];
+
+  // Content calendar
+  const calendar=[
+    {day:'Lun',content:'📱 Post Instagram — astuce ou témoignage',color:'rgba(68,138,255,.2)',text:'var(--blue)'},
+    {day:'Mar',content:'📄 Story — coulisses, prestataire du jour',color:'rgba(179,136,255,.2)',text:'var(--purple)'},
+    {day:'Mer',content:'🎬 Reel/TikTok — avant/après d\'un service',color:'rgba(255,145,0,.2)',text:'var(--orange)'},
+    {day:'Jeu',content:'📊 Post — stat ou chiffre clé du business',color:'rgba(0,230,118,.2)',text:'var(--green)'},
+    {day:'Ven',content:'🗣️ Témoignage client (screenshot ou vidéo)',color:'rgba(255,215,64,.2)',text:'var(--yellow)'},
+    {day:'Sam',content:'🎁 Promo — offre weekend ou parrainage',color:'rgba(255,82,82,.2)',text:'var(--red)'},
+    {day:'Dim',content:'📋 Planification semaine suivante',color:'rgba(255,255,255,.05)',text:'var(--dim)'},
+  ];
+
+  // Launch phases
+  const phases=[
+    {name:'Pré-lancement (J-30)',emoji:'🔧',tasks:['Créer les comptes réseaux sociaux','Préparer 15 posts d\'avance','Recruter 10 premiers prestataires','Créer landing page avec liste d\'attente','Imprimer flyers (200 exemplaires)']},
+    {name:'Lancement (Semaine 1)',emoji:'🚀',tasks:['Post d\'annonce sur tous les réseaux','Distribution flyers quartier par quartier','Offre lancement: 0% commission la 1ère semaine','Contacter 5 influenceurs locaux','Pub Facebook 10€/jour géolocalisée']},
+    {name:'Croissance (Mois 1-3)',emoji:'📈',tasks:['Activer le programme de parrainage','1 Reel/TikTok par semaine','Collecter et poster les avis clients','Partenariats avec 3 commerces locaux','Optimiser les pubs selon les résultats']},
+    {name:'Scale (Mois 3-6)',emoji:'⚡',tasks:['Étendre à d\'autres quartiers/villes','Augmenter budget pub si ROI positif','Recruter un community manager freelance','Lancer les abonnements premium','Automatiser le maximum']},
+  ];
+
+  // Marketing score
+  const budgetMonthly=d.monthlyCost;
+  const budgetScore=budgetMonthly>=300?90:budgetMonthly>=100?70:budgetMonthly>=50?50:30;
+  const competitorCount=(d.competitors.match(/,/g)||[]).length+1;
+  const competitorScore=competitorCount<=1?90:competitorCount<=3?65:40;
+  const advantageScore=d.advantage.length>50?80:d.advantage.length>20?60:30;
+  const overallScore=Math.round((budgetScore+competitorScore+advantageScore)/3);
+
+  let html=`
+    <div class="card">
+      <h2>📣 Stratégie Marketing — ${d.name}</h2>
+      <p style="color:var(--dim);font-size:.9em;margin-bottom:16px">${d.pitch}</p>
+      <div class="row" style="text-align:center">
+        <div class="metric"><div class="metric-val" style="color:var(--cyan)">${fmt(targetUsers)}</div><div class="metric-label">Utilisateurs cibles</div></div>
+        <div class="metric"><div class="metric-val" style="color:var(--green)">${fmt(revPerTx)}€</div><div class="metric-label">Revenu / transaction</div></div>
+        <div class="metric">
+          <div class="metric-val" style="color:${overallScore>=70?'var(--green)':overallScore>=50?'var(--yellow)':'var(--red)'}">${overallScore}/100</div>
+          <div class="metric-label">Score viabilité</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📢 Canaux marketing</h2>
+      <p style="color:var(--dim);font-size:.85em;margin-bottom:12px">Répartition recommandée de ton budget marketing</p>`;
+
+  for(const ch of channels){
+    const prioTag=ch.priority==='high'?'<span class="tag tag-green">Prioritaire</span>':ch.priority==='medium'?'<span class="tag tag-blue">Important</span>':'<span class="tag tag-purple">Bonus</span>';
+    html+=`<div class="strat-item">
+      <div class="strat-icon">${ch.emoji}</div>
+      <div class="strat-content">
+        <div class="strat-title">${ch.name} ${prioTag} <span class="tag tag-orange">${ch.budget}% budget</span></div>
+        <div class="strat-desc">${ch.desc}</div>
+      </div>
+    </div>`;
+  }
+  html+=`</div>`;
+
+  // Content calendar
+  html+=`<div class="card"><h2>📅 Calendrier de contenu (semaine type)</h2>`;
+  for(const c of calendar){
+    html+=`<div class="cal-row">
+      <div class="cal-day">${c.day}</div>
+      <div class="cal-bar" style="background:${c.color};color:${c.text}">${c.content}</div>
+    </div>`;
+  }
+  html+=`</div>`;
+
+  // Launch phases
+  html+=`<div class="card"><h2>🚀 Plan de lancement</h2>`;
+  for(const phase of phases){
+    html+=`<div class="strat-section"><h3>${phase.emoji} ${phase.name}</h3>`;
+    for(const task of phase.tasks){
+      html+=`<div style="padding:4px 0 4px 20px;font-size:.85em;color:var(--dim)">☐ ${task}</div>`;
+    }
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+
+  // Quick wins
+  html+=`<div class="card"><h2>💡 Actions immédiates (cette semaine)</h2>
+    <div class="strat-item"><div class="strat-icon">1️⃣</div><div class="strat-content"><div class="strat-title">Crée un compte Instagram @${d.name.toLowerCase().replace(/\s/g,'')}</div><div class="strat-desc">Bio claire, lien vers ta landing page, 9 premiers posts prêts.</div></div></div>
+    <div class="strat-item"><div class="strat-icon">2️⃣</div><div class="strat-content"><div class="strat-title">Landing page avec liste d'attente</div><div class="strat-desc">1 page simple: pitch + email pour être notifié du lancement. Utilise Carrd.co (gratuit).</div></div></div>
+    <div class="strat-item"><div class="strat-icon">3️⃣</div><div class="strat-content"><div class="strat-title">Recrute 5 prestataires pilotes</div><div class="strat-desc">Poste sur les groupes Facebook locaux, LeBonCoin, bouche à oreille. Offre 0% commission le 1er mois.</div></div></div>
+    <div class="strat-item"><div class="strat-icon">4️⃣</div><div class="strat-content"><div class="strat-title">Valide la demande</div><div class="strat-desc">Poste sur les réseaux "Qui aurait besoin d'aide pour X dans le quartier Y ?" et compte les réponses.</div></div></div>
+  </div>`;
+
+  document.getElementById('pane-marketing').innerHTML=html;
+}
+
+// ============ PROJECTIONS ============
+function generateProjections(d){
+  const revPerTx=d.price*d.commission/100;
+  const marketSizes={small:50000,medium:200000,large:600000,paris:2000000};
+  const pop=marketSizes[d.market];
+
+  // Growth model: S-curve
+  // Month 1: 20 transactions, grows ~40% per month, caps based on market
+  const maxMonthlyTx=Math.round(pop*0.001);
+  const months=[];
+  let totalRev=0,totalCost=d.launchCost;
+  let cumRev=0,cumCost=d.launchCost;
+
+  for(let m=1;m<=12;m++){
+    const growthRate=m<=3?0.5:m<=6?0.35:0.2;
+    const prevTx=m===1?20:(months[m-2]?.transactions||20);
+    const tx=Math.min(Math.round(prevTx*(1+growthRate)),maxMonthlyTx);
+    const rev=tx*revPerTx;
+    const mktBudget=m<=3?d.monthlyCost*1.5:d.monthlyCost;
+    const cost=mktBudget;
+    const profit=rev-cost;
+    cumRev+=rev;cumCost+=cost;
+    months.push({month:m,transactions:tx,revenue:Math.round(rev),cost:Math.round(cost),profit:Math.round(profit),cumRev:Math.round(cumRev),cumCost:Math.round(cumCost),cumProfit:Math.round(cumRev-cumCost)});
+  }
+
+  // Break even
+  const breakEven=months.find(m=>m.cumProfit>0);
+  const breakEvenMonth=breakEven?breakEven.month:'>12';
+
+  // Year totals
+  const yearRev=months[11].cumRev;
+  const yearCost=months[11].cumCost;
+  const yearProfit=yearRev-yearCost;
+  const maxMonthlyRev=months[11].revenue;
+
+  // Chart
+  const maxVal=Math.max(...months.map(m=>Math.max(m.revenue,m.cost)));
+
+  let html=`
+    <div class="card">
+      <h2>📊 Projections financières — 12 mois</h2>
+      <div class="row" style="text-align:center;margin-bottom:20px">
+        <div class="metric"><div class="metric-val" style="color:var(--green)">${fmt(yearRev)}€</div><div class="metric-label">Revenu annuel</div></div>
+        <div class="metric"><div class="metric-val" style="color:${yearProfit>=0?'var(--green)':'var(--red)'}">${yearProfit>=0?'+':''}${fmt(yearProfit)}€</div><div class="metric-label">Profit annuel</div></div>
+        <div class="metric"><div class="metric-val" style="color:var(--cyan)">M${breakEvenMonth}</div><div class="metric-label">Rentabilité</div></div>
+        <div class="metric"><div class="metric-val" style="color:var(--purple)">${fmt(months[11].transactions)}</div><div class="metric-label">Tx / mois (M12)</div></div>
+      </div>
+
+      <h3 style="margin-bottom:8px;color:var(--dim);font-size:.85em">Revenus vs Coûts mensuels</h3>
+      <div class="chart">`;
+  for(const m of months){
+    const hRev=Math.max(2,Math.round(m.revenue/maxVal*130));
+    const hCost=Math.max(2,Math.round(m.cost/maxVal*130));
+    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;align-self:flex-end">
+      <div style="font-size:.6em;color:var(--green)">${fmt(m.revenue)}</div>
+      <div style="width:60%;height:${hRev}px;background:var(--green);border-radius:3px 3px 0 0;opacity:.7"></div>
+      <div style="width:60%;height:${hCost}px;background:var(--red);border-radius:3px 3px 0 0;opacity:.5"></div>
+      <div style="font-size:.6em;color:var(--dim)">M${m.month}</div>
+    </div>`;
+  }
+  html+=`</div>
+    <div style="display:flex;gap:16px;margin-top:8px;font-size:.75em;color:var(--dim)">
+      <span>🟢 Revenus</span><span>🔴 Coûts</span>
+    </div></div>`;
+
+  // Cumulative profit
+  html+=`<div class="card"><h2>📈 Profit cumulé</h2>
+    <div class="chart">`;
+  const maxCum=Math.max(...months.map(m=>Math.abs(m.cumProfit)));
+  for(const m of months){
+    const h=Math.max(2,Math.round(Math.abs(m.cumProfit)/maxCum*130));
+    const color=m.cumProfit>=0?'var(--green)':'var(--red)';
+    html+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;align-self:flex-end">
+      <div style="font-size:.6em;color:${color}">${m.cumProfit>=0?'+':''}${fmt(m.cumProfit)}</div>
+      <div style="width:70%;height:${h}px;background:${color};border-radius:3px 3px 0 0;opacity:.6"></div>
+      <div style="font-size:.6em;color:var(--dim)">M${m.month}</div>
+    </div>`;
+  }
+  html+=`</div></div>`;
+
+  // Monthly breakdown table
+  html+=`<div class="card"><h2>📋 Détail mensuel</h2>
+    <div style="overflow-x:auto"><table style="width:100%;font-size:.8em;border-collapse:collapse">
+    <tr style="color:var(--dim);text-align:right"><th style="text-align:left;padding:6px">Mois</th><th style="padding:6px">Transactions</th><th style="padding:6px">Revenus</th><th style="padding:6px">Coûts</th><th style="padding:6px">Profit</th><th style="padding:6px">Cumulé</th></tr>`;
+  for(const m of months){
+    html+=`<tr style="border-top:1px solid var(--border);text-align:right">
+      <td style="text-align:left;padding:6px;font-weight:600">M${m.month}</td>
+      <td style="padding:6px">${m.transactions}</td>
+      <td style="padding:6px;color:var(--green)">${fmt(m.revenue)}€</td>
+      <td style="padding:6px;color:var(--red)">${fmt(m.cost)}€</td>
+      <td style="padding:6px;color:${m.profit>=0?'var(--green)':'var(--red)'}">${m.profit>=0?'+':''}${fmt(m.profit)}€</td>
+      <td style="padding:6px;color:${m.cumProfit>=0?'var(--green)':'var(--red)'}"><strong>${m.cumProfit>=0?'+':''}${fmt(m.cumProfit)}€</strong></td>
+    </tr>`;
+  }
+  html+=`</table></div></div>`;
+
+  // Scenarios
+  const pessRev=Math.round(yearRev*.5);
+  const optRev=Math.round(yearRev*1.8);
+  html+=`<div class="card"><h2>🎯 Scénarios</h2>
+    <div class="row">
+      <div style="text-align:center;padding:12px;background:rgba(255,82,82,.06);border-radius:12px">
+        <div style="font-size:.8em;color:var(--dim)">⚠️ Pessimiste</div>
+        <div style="font-size:1.2em;font-weight:900;color:var(--red)">${fmt(pessRev)}€</div>
+        <div style="font-size:.75em;color:var(--dim)">Profit: ${fmt(pessRev-yearCost)}€</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:rgba(68,138,255,.06);border-radius:12px;border:2px solid rgba(68,138,255,.2)">
+        <div style="font-size:.8em;color:var(--dim)">📊 Réaliste</div>
+        <div style="font-size:1.2em;font-weight:900;color:var(--blue)">${fmt(yearRev)}€</div>
+        <div style="font-size:.75em;color:var(--dim)">Profit: ${fmt(yearProfit)}€</div>
+      </div>
+      <div style="text-align:center;padding:12px;background:rgba(0,230,118,.06);border-radius:12px">
+        <div style="font-size:.8em;color:var(--dim)">🌟 Optimiste</div>
+        <div style="font-size:1.2em;font-weight:900;color:var(--green)">${fmt(optRev)}€</div>
+        <div style="font-size:.75em;color:var(--dim)">Profit: ${fmt(optRev-yearCost)}€</div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('pane-projections').innerHTML=html;
+}
+</script>
+</body>
+</html>
