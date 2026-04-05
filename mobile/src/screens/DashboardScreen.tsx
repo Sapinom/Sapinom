@@ -3,6 +3,11 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-nati
 import { useGame } from '../hooks/useGame';
 import { COLORS, WEATHER_EMOJI, WEATHER_NAME, SEASON_EMOJI, SEASON_NAME, ECO_COLOR, ECO_NAME, BIZ_EMOJI } from '../data/constants';
 import CashCounter from '../components/CashCounter';
+import FloatingProfit from '../components/FloatingProfit';
+import AnimatedCard from '../components/AnimatedCard';
+import PulsingView from '../components/PulsingView';
+import LiveBar from '../components/LiveBar';
+import WeatherScene from '../components/WeatherScene';
 import { fmt } from '../utils/random';
 
 export default function DashboardScreen() {
@@ -15,143 +20,156 @@ export default function DashboardScreen() {
   const speedBtns = [1, 2, 3];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Player header */}
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.playerName}>{p.name}</Text>
-          <CashCounter value={Math.round(p.cash)} size={28} />
-        </View>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Niv. {p.level}</Text>
-          <View style={styles.xpBar}>
-            <View style={[styles.xpFill, { width: `${xpPct}%` }]} />
+    <View style={styles.root}>
+      {/* Weather particles */}
+      <WeatherScene weather={w.weather} />
+
+      {/* Floating profit numbers */}
+      <FloatingProfit value={Math.round(p.cash)} trigger={w.day} />
+
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {/* Player header */}
+        <AnimatedCard delay={0} style={styles.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.playerName}>{p.name}</Text>
+            <CashCounter value={Math.round(p.cash)} size={28} />
           </View>
-        </View>
-      </View>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>Niv. {p.level}</Text>
+            <LiveBar percent={xpPct} color={COLORS.purple} height={5} />
+          </View>
+        </AnimatedCard>
 
-      {/* Weather & day */}
-      <View style={styles.weatherCard}>
-        <Text style={styles.weatherEmoji}>{WEATHER_EMOJI[w.weather] || '🌤️'}</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.dayText}>Jour {w.day}</Text>
-          <Text style={styles.seasonText}>
-            {SEASON_EMOJI[w.season]} {SEASON_NAME[w.season]} • {WEATHER_NAME[w.weather]}
-            {w.extreme ? ' ⚠️' : ''}
-          </Text>
-        </View>
-      </View>
+        {/* Weather & day */}
+        <AnimatedCard delay={80} style={styles.weatherCard}>
+          <PulsingView active intensity={0.08} speed={2000}>
+            <Text style={styles.weatherEmoji}>{WEATHER_EMOJI[w.weather] || '🌤️'}</Text>
+          </PulsingView>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.dayText}>Jour {w.day}</Text>
+            <Text style={styles.seasonText}>
+              {SEASON_EMOJI[w.season]} {SEASON_NAME[w.season]} • {WEATHER_NAME[w.weather]}
+              {w.extreme ? ' ⚠️' : ''}
+            </Text>
+          </View>
+        </AnimatedCard>
 
-      {/* Economy strip */}
-      <View style={styles.ecoStrip}>
-        <View style={[styles.ecoChip, { borderColor: ECO_COLOR[w.ecoCycle] }]}>
-          <Text style={[styles.ecoChipText, { color: ECO_COLOR[w.ecoCycle] }]}>
-            📊 {ECO_NAME[w.ecoCycle]}
-          </Text>
-        </View>
-        <View style={styles.ecoChip}>
-          <Text style={styles.ecoChipText}>💰 {w.consumption.toFixed(2)}</Text>
-        </View>
-        <View style={styles.ecoChip}>
-          <Text style={styles.ecoChipText}>📉 {(w.unemployment * 100).toFixed(0)}%</Text>
-        </View>
-        <View style={styles.ecoChip}>
-          <Text style={styles.ecoChipText}>🏦 {(w.interestRate * 100).toFixed(1)}%</Text>
-        </View>
-      </View>
+        {/* Economy strip */}
+        <AnimatedCard delay={160} style={styles.ecoStrip}>
+          <PulsingView active={w.ecoCycle !== 'stable'} intensity={0.04} speed={1200}>
+            <View style={[styles.ecoChip, { borderColor: ECO_COLOR[w.ecoCycle] }]}>
+              <Text style={[styles.ecoChipText, { color: ECO_COLOR[w.ecoCycle] }]}>
+                📊 {ECO_NAME[w.ecoCycle]}
+              </Text>
+            </View>
+          </PulsingView>
+          <View style={styles.ecoChip}>
+            <Text style={styles.ecoChipText}>💰 {w.consumption.toFixed(2)}</Text>
+          </View>
+          <View style={styles.ecoChip}>
+            <Text style={styles.ecoChipText}>📉 {(w.unemployment * 100).toFixed(0)}%</Text>
+          </View>
+          <View style={styles.ecoChip}>
+            <Text style={styles.ecoChipText}>🏦 {(w.interestRate * 100).toFixed(1)}%</Text>
+          </View>
+        </AnimatedCard>
 
-      {/* Speed controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.pauseBtn, state.paused && styles.pauseBtnActive]}
-          onPress={togglePause}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.pauseBtnText}>{state.paused ? '▶️' : '⏸'}</Text>
-        </TouchableOpacity>
-        {speedBtns.map(s => (
+        {/* Speed controls */}
+        <AnimatedCard delay={240} style={styles.controls}>
           <TouchableOpacity
-            key={s}
-            style={[styles.speedBtn, state.speed === s && styles.speedBtnActive]}
-            onPress={() => setSpeed(s)}
+            style={[styles.pauseBtn, state.paused && styles.pauseBtnActive]}
+            onPress={togglePause}
             activeOpacity={0.7}
           >
-            <Text style={[styles.speedBtnText, state.speed === s && { color: 'white' }]}>
-              x{s}
-            </Text>
+            <Text style={styles.pauseBtnText}>{state.paused ? '▶️' : '⏸'}</Text>
           </TouchableOpacity>
-        ))}
-      </View>
+          {speedBtns.map(s => (
+            <TouchableOpacity
+              key={s}
+              style={[styles.speedBtn, state.speed === s && styles.speedBtnActive]}
+              onPress={() => setSpeed(s)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.speedBtnText, state.speed === s && { color: 'white' }]}>
+                x{s}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </AnimatedCard>
 
-      {/* Active events */}
-      {w.activeEvents.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Événements actifs</Text>
-          <View style={styles.eventBadges}>
-            {w.activeEvents.map((e, i) => (
-              <View key={i} style={[styles.badge, e.impact === 'positive' ? styles.badgeGreen : e.impact === 'negative' ? styles.badgeRed : styles.badgeYellow]}>
-                <Text style={styles.badgeText}>{e.emoji} {e.name} ({e.daysLeft}j)</Text>
+        {/* Active events */}
+        {w.activeEvents.length > 0 && (
+          <AnimatedCard delay={300} style={styles.section}>
+            <Text style={styles.sectionTitle}>Événements actifs</Text>
+            <View style={styles.eventBadges}>
+              {w.activeEvents.map((e, i) => (
+                <PulsingView key={i} active intensity={0.05} speed={1000}>
+                  <View style={[styles.badge, e.impact === 'positive' ? styles.badgeGreen : e.impact === 'negative' ? styles.badgeRed : styles.badgeYellow]}>
+                    <Text style={styles.badgeText}>{e.emoji} {e.name} ({e.daysLeft}j)</Text>
+                  </View>
+                </PulsingView>
+              ))}
+            </View>
+          </AnimatedCard>
+        )}
+
+        {/* Profit summary */}
+        {businesses.length > 0 ? (
+          <AnimatedCard delay={350} style={styles.card}>
+            <Text style={styles.sectionTitle}>💰 Profits du jour</Text>
+            {businesses.map(b => {
+              const profit = b.lastRev - b.lastCost;
+              return (
+                <View key={b.id} style={styles.profitLine}>
+                  <Text style={styles.profitName}>{BIZ_EMOJI[b.type]} {b.name}</Text>
+                  <Text style={[styles.profitVal, profit >= 0 ? styles.green : styles.red]}>
+                    {profit >= 0 ? '+' : ''}{fmt(profit)}$/j
+                  </Text>
+                </View>
+              );
+            })}
+            <View style={[styles.profitLine, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 10, marginTop: 4 }]}>
+              <Text style={[styles.profitName, { fontWeight: '800' }]}>Total</Text>
+              <Text style={[styles.profitVal, { fontWeight: '800', fontSize: 16 }, totalProfit >= 0 ? styles.green : styles.red]}>
+                {totalProfit >= 0 ? '+' : ''}{fmt(totalProfit)}$/j
+              </Text>
+            </View>
+          </AnimatedCard>
+        ) : (
+          <AnimatedCard delay={350} style={styles.empty}>
+            <PulsingView active intensity={0.1} speed={2000}>
+              <Text style={styles.emptyEmoji}>🚀</Text>
+            </PulsingView>
+            <Text style={styles.emptyText}>Ouvre ton premier business{'\n'}dans l'onglet Marché !</Text>
+          </AnimatedCard>
+        )}
+
+        {/* Recent events */}
+        {w.eventLog.length > 0 && (
+          <AnimatedCard delay={420} style={styles.card}>
+            <Text style={styles.sectionTitle}>📰 Derniers événements</Text>
+            {w.eventLog.slice(-3).reverse().map((e, i) => (
+              <View key={i} style={styles.logItem}>
+                <Text style={styles.logDay}>J{e.day}</Text>
+                <Text style={styles.logEmoji}>{e.emoji}</Text>
+                <Text style={styles.logText} numberOfLines={1}>{e.name}</Text>
               </View>
             ))}
-          </View>
-        </View>
-      )}
-
-      {/* Profit summary */}
-      {businesses.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>💰 Profits du jour</Text>
-          {businesses.map(b => {
-            const profit = b.lastRev - b.lastCost;
-            return (
-              <View key={b.id} style={styles.profitLine}>
-                <Text style={styles.profitName}>{BIZ_EMOJI[b.type]} {b.name}</Text>
-                <Text style={[styles.profitVal, profit >= 0 ? styles.green : styles.red]}>
-                  {profit >= 0 ? '+' : ''}{fmt(profit)}$/j
-                </Text>
-              </View>
-            );
-          })}
-          <View style={[styles.profitLine, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)', paddingTop: 10, marginTop: 4 }]}>
-            <Text style={[styles.profitName, { fontWeight: '800' }]}>Total</Text>
-            <Text style={[styles.profitVal, { fontWeight: '800', fontSize: 16 }, totalProfit >= 0 ? styles.green : styles.red]}>
-              {totalProfit >= 0 ? '+' : ''}{fmt(totalProfit)}$/j
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.empty}>
-          <Text style={styles.emptyEmoji}>🚀</Text>
-          <Text style={styles.emptyText}>Ouvre ton premier business{'\n'}dans l'onglet Marché !</Text>
-        </View>
-      )}
-
-      {/* Recent events */}
-      {w.eventLog.length > 0 && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>📰 Derniers événements</Text>
-          {w.eventLog.slice(-3).reverse().map((e, i) => (
-            <View key={i} style={styles.logItem}>
-              <Text style={styles.logDay}>J{e.day}</Text>
-              <Text style={styles.logEmoji}>{e.emoji}</Text>
-              <Text style={styles.logText} numberOfLines={1}>{e.name}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-    </ScrollView>
+          </AnimatedCard>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
+  root: { flex: 1, backgroundColor: COLORS.bg },
+  container: { flex: 1 },
   content: { padding: 16, paddingBottom: 100 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   playerName: { fontSize: 14, color: COLORS.textDim, marginBottom: 4 },
-  levelBadge: { alignItems: 'center' },
+  levelBadge: { alignItems: 'center', width: 70 },
   levelText: { fontSize: 13, fontWeight: '800', color: COLORS.purple, marginBottom: 4 },
-  xpBar: { width: 60, height: 5, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
-  xpFill: { height: '100%', backgroundColor: COLORS.purple, borderRadius: 3 },
 
   weatherCard: {
     flexDirection: 'row', alignItems: 'center', gap: 16,
