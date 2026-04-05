@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import {
   IdleState, createIdleState, tickIdle, tap as doTap,
-  buyBusiness, buyManager, buyUpgrade, startBusiness,
+  buyBusiness, buyManager, popBubble as doPopBubble,
+  tapBusiness, prestige as doPrestige,
 } from '../engine/IdleEngine';
 
 interface IdleGameContextValue {
@@ -10,8 +11,10 @@ interface IdleGameContextValue {
   tap: () => number;
   buy: (defId: string) => boolean;
   hireManager: (defId: string) => boolean;
-  upgrade: (upgradeId: string) => boolean;
-  tapBusiness: (defId: string) => void;
+  tapBiz: (defId: string) => void;
+  popBubble: (id: number) => { amount: number; type: string } | null;
+  prestige: () => boolean;
+  clearAchievement: () => void;
 }
 
 const Ctx = createContext<IdleGameContextValue>(null!);
@@ -22,18 +25,17 @@ export function IdleGameProvider({ children }: { children: React.ReactNode }) {
   const ref = useRef(state);
   ref.current = state;
 
-  // Main game loop — runs every 50ms for smooth progress bars
   useEffect(() => {
     if (!state.started) return;
     const interval = setInterval(() => {
       const s = ref.current;
       const now = Date.now();
-      const delta = (now - s.lastTick) / 1000;
+      const delta = Math.min((now - s.lastTick) / 1000, 0.5);
       if (delta > 0.01) {
-        tickIdle(s, Math.min(delta, 1)); // cap delta to prevent huge jumps
+        tickIdle(s, delta);
         setState({ ...s });
       }
-    }, 50);
+    }, 33); // ~30fps for smooth progress bars
     return () => clearInterval(interval);
   }, [state.started]);
 
@@ -61,19 +63,30 @@ export function IdleGameProvider({ children }: { children: React.ReactNode }) {
     return ok;
   }, []);
 
-  const upgrade = useCallback((upgradeId: string) => {
-    const ok = buyUpgrade(ref.current, upgradeId);
+  const tapBiz = useCallback((defId: string) => {
+    tapBusiness(ref.current, defId);
+    setState({ ...ref.current });
+  }, []);
+
+  const popBubbleFn = useCallback((id: number) => {
+    const result = doPopBubble(ref.current, id);
+    setState({ ...ref.current });
+    return result;
+  }, []);
+
+  const prestigeFn = useCallback(() => {
+    const ok = doPrestige(ref.current);
     setState({ ...ref.current });
     return ok;
   }, []);
 
-  const tapBusiness = useCallback((defId: string) => {
-    startBusiness(ref.current, defId);
+  const clearAchievement = useCallback(() => {
+    ref.current.lastAchievement = null;
     setState({ ...ref.current });
   }, []);
 
   return (
-    <Ctx.Provider value={{ state, start, tap: tapFn, buy, hireManager, upgrade, tapBusiness }}>
+    <Ctx.Provider value={{ state, start, tap: tapFn, buy, hireManager, tapBiz, popBubble: popBubbleFn, prestige: prestigeFn, clearAchievement }}>
       {children}
     </Ctx.Provider>
   );

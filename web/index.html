@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e27">
+<title>Business Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+:root{--bg:#0a0e27;--bg2:#111638;--card:#1a1f4a;--card2:#222860;--accent:#6c5ce7;--accent2:#a29bfe;--green:#00b894;--red:#e17055;--yellow:#fdcb6e;--text:#fff;--text2:#b2bec3;--glass:rgba(255,255,255,0.08);--shadow:0 8px 32px rgba(0,0,0,0.3)}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+body{display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+::-webkit-scrollbar{display:none}
+.screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+.screen.active{display:flex}
+#start-screen{justify-content:center;align-items:center;background:linear-gradient(135deg,#0a0e27 0%,#1a1040 50%,#0a0e27 100%);padding:20px}
+.game-title{font-size:2.5em;font-weight:900;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#74b9ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;margin-bottom:8px}
+.tagline{color:var(--text2);font-size:1em;margin-bottom:40px;text-align:center}
+.start-input{width:100%;max-width:300px;padding:16px;border-radius:16px;border:2px solid var(--accent);background:var(--card);color:#fff;font-size:1.1em;text-align:center;outline:none;margin-bottom:20px}
+.start-btn{padding:18px 60px;border-radius:20px;border:none;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;font-size:1.2em;font-weight:700;cursor:pointer;transition:transform .2s}
+.start-btn:active{transform:scale(0.95)}
+.app-container{display:none;flex-direction:column;height:100%;overflow:hidden}
+.app-container.active{display:flex}
+.tab-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:16px;padding-bottom:90px}
+.tab-panel{display:none;animation:fadeIn .3s}
+.tab-panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:linear-gradient(180deg,rgba(10,14,39,0.9),rgba(10,14,39,0.98));backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.05);padding:8px 0;padding-bottom:calc(8px + env(safe-area-inset-bottom));z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px;background:none;border:none;color:var(--text2);font-size:0.65em;cursor:pointer;transition:color .2s}
+.nav-btn.active{color:var(--accent2)}
+.nav-btn .icon{font-size:1.8em}
+.card{background:linear-gradient(135deg,var(--card),var(--card2));border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow);border:1px solid rgba(255,255,255,0.05)}
+.header-bar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg2);border-radius:16px;margin-bottom:12px}
+.cash-display{font-size:1.8em;font-weight:900;color:var(--green);transition:color .3s}
+.cash-display.negative{color:var(--red)}
+.btn{padding:12px 24px;border-radius:12px;border:none;font-weight:700;font-size:0.9em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:44px}
+.btn:active{transform:scale(0.95)}
+.btn-primary{background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff}
+.btn-success{background:linear-gradient(135deg,#00b894,#55efc4);color:#111}
+.btn-danger{background:linear-gradient(135deg,#e17055,#fab1a0);color:#fff}
+.btn-secondary{background:var(--glass);color:var(--text2);border:1px solid rgba(255,255,255,0.1)}
+.btn:disabled{opacity:0.4;pointer-events:none}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:0.75em;font-weight:600}
+.badge-green{background:rgba(0,184,148,0.2);color:#55efc4}
+.badge-red{background:rgba(225,112,85,0.2);color:#fab1a0}
+.badge-yellow{background:rgba(253,203,110,0.2);color:#ffeaa7}
+.progress-bar{height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin:4px 0}
+.progress-fill{height:100%;border-radius:4px;transition:width .5s ease}
+.weather-emoji{font-size:2em;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.economy-strip{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.econ-chip{padding:4px 10px;border-radius:12px;font-size:0.75em;background:var(--glass)}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:var(--card);border-radius:12px;padding:12px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:1000;transition:transform .4s cubic-bezier(0.175,0.885,0.32,1.275);max-width:90%;text-align:center;border:1px solid rgba(255,255,255,0.1);font-size:0.9em}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.biz-card{display:flex;gap:12px;align-items:flex-start}
+.biz-icon{font-size:2.2em;flex-shrink:0}
+.biz-info{flex:1;min-width:0}
+.biz-name{font-weight:700;font-size:1.05em}
+.biz-type{font-size:0.8em;color:var(--text2)}
+.biz-profit{font-weight:700;font-size:1.1em;margin:4px 0}
+.biz-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.biz-actions .btn{padding:8px 14px;font-size:0.8em}
+.market-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.market-card{text-align:center;padding:14px 10px;cursor:pointer}
+.market-card .m-icon{font-size:2.5em;display:block;margin-bottom:6px}
+.market-card .name{font-weight:700;font-size:0.95em;margin-bottom:4px}
+.market-card .cost{color:var(--yellow);font-weight:600;font-size:0.85em}
+.market-card .rev{color:var(--green);font-size:0.75em}
+.slider-group{margin:12px 0}
+.slider-group label{display:block;font-size:0.85em;color:var(--text2);margin-bottom:6px}
+.slider-group input[type=range]{width:100%;accent-color:var(--accent)}
+.slider-value{font-weight:700;color:var(--accent2)}
+.event-item{padding:10px 14px;border-left:3px solid;margin-bottom:8px;border-radius:0 8px 8px 0;background:var(--glass)}
+.event-positive{border-color:var(--green)}
+.event-negative{border-color:var(--red)}
+.event-neutral{border-color:var(--yellow)}
+.event-day{font-size:0.75em;color:var(--text2)}
+.section-title{font-size:0.85em;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px}
+.price-control{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:0.85em}
+.active-events-badges{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.day-btns{display:flex;gap:10px;margin-top:12px}
+.day-btns .btn{flex:1}
+.stat-row{display:flex;justify-content:space-between;padding:4px 0;font-size:0.85em}
+.stat-label{color:var(--text2)}
+</style>
+</head>
+<body>
+<div id="start-screen" class="screen active">
+<div class="game-title">Business Simulator</div>
+<div class="tagline">Start poor. Build an empire.</div>
+<input type="text" class="start-input" id="player-name" placeholder="Enter your name" maxlength="20">
+<button class="start-btn" onclick="startGame()">Start Game 🚀</button>
+</div>
+<div id="app" class="app-container">
+<div class="tab-content">
+<div id="tab-dashboard" class="tab-panel active"></div>
+<div id="tab-business" class="tab-panel"></div>
+<div id="tab-market" class="tab-panel"></div>
+<div id="tab-bank" class="tab-panel"></div>
+<div id="tab-events" class="tab-panel"></div>
+</div>
+<nav class="bottom-nav">
+<button class="nav-btn active" data-tab="dashboard"><span class="icon">🏠</span>Home</button>
+<button class="nav-btn" data-tab="business"><span class="icon">🏢</span>Biz</button>
+<button class="nav-btn" data-tab="market"><span class="icon">🛒</span>Market</button>
+<button class="nav-btn" data-tab="bank"><span class="icon">🏦</span>Bank</button>
+<button class="nav-btn" data-tab="events"><span class="icon">📰</span>Log</button>
+</nav>
+</div>
+<div id="toast" class="toast"></div>
+<script>
+
+// ===== GAME DATA =====
+const WEATHER_EMOJI = {sun:'☀️',rain:'🌧️',storm:'⛈️',heatwave:'🔥',snow:'❄️',flood:'🌊',cloudy:'☁️'};
+const SEASON_EMOJI = {spring:'🌸',summer:'☀️',autumn:'🍂',winter:'❄️'};
+const BIZ_EMOJI = {restaurant:'🍽️',boutique:'🛍️',immobilier:'🏠',startup:'💻',food_truck:'🚚',garage:'🔧',hotel:'🏨',ferme:'🌾'};
+const BIZ_NAMES = {restaurant:'Restaurant',boutique:'Boutique',immobilier:'Real Estate',startup:'Startup',food_truck:'Food Truck',garage:'Garage',hotel:'Hotel',ferme:'Farm'};
+
+const WEATHER_PROBS = {
+  spring:{sun:35,rain:30,cloudy:25,storm:8,heatwave:2},
+  summer:{sun:50,cloudy:15,rain:10,heatwave:15,storm:8,flood:2},
+  autumn:{rain:35,cloudy:25,sun:20,storm:12,flood:5,snow:3},
+  winter:{cloudy:25,snow:25,rain:20,sun:15,storm:10,flood:3}
+};
+
+const WEATHER_DURATION = {sun:[1,4],rain:[1,4],cloudy:[1,4],storm:[1,3],heatwave:[3,7],flood:[2,5],snow:[1,4]};
+
+const BIZ_TYPES = {
+  restaurant:{baseCost:15000,dailyBaseRevenue:800,dailyBaseCost:350,
+    weather:{sun:1.2,rain:-0.8,storm:-1.5,heatwave:-0.5,snow:-1.0,flood:-2.0,cloudy:0},
+    season:{spring:1.0,summer:1.3,autumn:0.9,winter:0.7},
+    economy:{consumption:1.5,inflation:1.2,interestRate:0.3,unemployment:1.0,rawMaterials:1.5}},
+  boutique:{baseCost:10000,dailyBaseRevenue:500,dailyBaseCost:200,
+    weather:{sun:1.0,rain:-0.5,storm:-1.0,heatwave:-0.3,snow:-0.7,flood:-1.5,cloudy:0},
+    season:{spring:1.2,summer:0.8,autumn:1.1,winter:1.4},
+    economy:{consumption:1.8,inflation:1.0,interestRate:0.2,unemployment:1.3,rawMaterials:0.8}},
+  immobilier:{baseCost:25000,dailyBaseRevenue:1200,dailyBaseCost:500,
+    weather:{sun:0.2,rain:-0.1,storm:-0.3,heatwave:0,snow:-0.2,flood:-1.0,cloudy:0},
+    season:{spring:1.3,summer:0.9,autumn:1.0,winter:0.7},
+    economy:{consumption:0.8,inflation:0.5,interestRate:2.0,unemployment:1.5,rawMaterials:0.3}},
+  startup:{baseCost:8000,dailyBaseRevenue:300,dailyBaseCost:400,
+    weather:{sun:0,rain:0,storm:-0.2,heatwave:-0.1,snow:0,flood:-0.5,cloudy:0},
+    season:{spring:1.0,summer:0.9,autumn:1.0,winter:1.0},
+    economy:{consumption:0.5,inflation:0.3,interestRate:1.5,unemployment:-0.5,rawMaterials:0.1}},
+  food_truck:{baseCost:5000,dailyBaseRevenue:400,dailyBaseCost:100,
+    weather:{sun:2.0,rain:-1.5,storm:-2.0,heatwave:0.5,snow:-1.8,flood:-2.0,cloudy:0},
+    season:{spring:1.3,summer:1.8,autumn:0.8,winter:0.4},
+    economy:{consumption:1.3,inflation:1.0,interestRate:0.1,unemployment:0.8,rawMaterials:1.8}},
+  garage:{baseCost:12000,dailyBaseRevenue:600,dailyBaseCost:250,
+    weather:{sun:0.1,rain:0.3,storm:0.5,heatwave:0.3,snow:0.8,flood:1.0,cloudy:0},
+    season:{spring:0.9,summer:0.8,autumn:1.1,winter:1.3},
+    economy:{consumption:0.7,inflation:0.8,interestRate:0.2,unemployment:0.5,rawMaterials:1.2}},
+  hotel:{baseCost:50000,dailyBaseRevenue:2000,dailyBaseCost:1000,
+    weather:{sun:1.5,rain:-0.5,storm:-1.0,heatwave:0.3,snow:0.8,flood:-1.5,cloudy:0},
+    season:{spring:1.1,summer:1.8,autumn:0.7,winter:1.2},
+    economy:{consumption:1.5,inflation:0.8,interestRate:0.5,unemployment:1.2,rawMaterials:0.5}},
+  ferme:{baseCost:20000,dailyBaseRevenue:700,dailyBaseCost:300,
+    weather:{sun:1.5,rain:0.5,storm:-1.5,heatwave:-1.8,snow:-1.5,flood:-2.0,cloudy:0},
+    season:{spring:1.5,summer:1.2,autumn:1.3,winter:0.3},
+    economy:{consumption:0.8,inflation:0.5,interestRate:0.3,unemployment:0.2,rawMaterials:0.5}}
+};
+
+const EVENT_DEFS = {
+  marketing_success:{name:'Marketing Success',emoji:'📈',type:'positive',weight:15,revMult:1.4,repChange:10,duration:7,cooldown:30,desc:'Your marketing campaign went viral!'},
+  star_employee:{name:'Star Employee',emoji:'⭐',type:'positive',weight:12,revMult:1.2,moraleChange:10,duration:14,cooldown:20,desc:'A star employee is boosting productivity!'},
+  subsidy:{name:'Government Subsidy',emoji:'💰',type:'positive',weight:8,cashChange:3000,repChange:5,duration:0,cooldown:60,desc:'You received a government subsidy!'},
+  buyout_opportunity:{name:'Buyout Opportunity',emoji:'🤝',type:'positive',weight:5,cashPct:-0.15,revMult:1.5,duration:30,cooldown:90,desc:'A buyout deal is boosting your revenue!'},
+  viral_review:{name:'Viral Review',emoji:'🌟',type:'positive',weight:10,revMult:1.3,repChange:15,duration:5,cooldown:25,desc:'A viral review is attracting customers!'},
+  bulk_order:{name:'Bulk Order',emoji:'📦',type:'positive',weight:10,cashChange:2000,duration:0,cooldown:15,desc:'You received a massive bulk order!'},
+  employee_quit:{name:'Employee Quit',emoji:'👋',type:'negative',weight:12,revMult:0.85,moraleChange:-10,duration:7,cooldown:14,desc:'A key employee just quit!'},
+  strike:{name:'Strike',emoji:'✊',type:'negative',weight:8,revMult:0.3,costMult:1.2,moraleChange:-20,duration:5,cooldown:30,desc:'Workers are on strike!'},
+  equipment_failure:{name:'Equipment Failure',emoji:'🔨',type:'negative',weight:14,cashChange:-1500,revMult:0.7,duration:3,cooldown:20,desc:'Major equipment broke down!'},
+  bad_buzz:{name:'Bad Buzz',emoji:'📉',type:'negative',weight:10,revMult:0.6,repChange:-20,duration:10,cooldown:30,desc:'Negative press is hurting your reputation!'},
+  tax_audit:{name:'Tax Audit',emoji:'🏛️',type:'negative',weight:7,cashPct:-0.08,repChange:-5,duration:0,cooldown:60,desc:'Tax authorities are auditing you!'},
+  theft:{name:'Theft',emoji:'🦹',type:'negative',weight:8,cashChange:-2000,repChange:-5,duration:0,cooldown:30,desc:'Your business was robbed!'},
+  logistics_delay:{name:'Logistics Delay',emoji:'🚛',type:'negative',weight:12,revMult:0.75,costMult:1.1,duration:4,cooldown:14,desc:'Supply chain delays are hurting operations!'},
+  health_inspection:{name:'Health Inspection',emoji:'🔬',type:'negative',weight:6,revMult:0,cashChange:-800,repChange:-10,duration:2,cooldown:45,desc:'Health inspection shut you down temporarily!',bizTypes:['restaurant','food_truck','hotel']},
+  competitor_opens:{name:'Competitor Opens',emoji:'🏪',type:'neutral',weight:10,revMult:0.9,repChange:-3,duration:14,cooldown:30,desc:'A new competitor opened nearby!'},
+  economic_boom:{name:'Economic Boom',emoji:'🚀',type:'positive',weight:8,econEffect:{consumption:0.2,inflation:0.01},duration:30,cooldown:90,desc:'The economy is booming!',isEconEvent:true},
+  recession:{name:'Recession',emoji:'📉',type:'negative',weight:6,econEffect:{consumption:-0.25,inflation:-0.01},duration:45,cooldown:120,desc:'Economic recession hits!',isEconEvent:true},
+  rate_hike:{name:'Rate Hike',emoji:'🏦',type:'negative',weight:7,econEffect:{interestRate:0.02},duration:60,cooldown:90,desc:'Central bank raised interest rates!',isEconEvent:true},
+  rate_cut:{name:'Rate Cut',emoji:'💳',type:'positive',weight:7,econEffect:{interestRate:-0.02},duration:60,cooldown:90,desc:'Central bank cut interest rates!',isEconEvent:true},
+  raw_material_crisis:{name:'Raw Material Crisis',emoji:'🛢️',type:'negative',weight:5,econEffect:{inflation:0.03,consumption:-0.1},duration:30,cooldown:60,desc:'Raw material prices are surging!',isEconEvent:true},
+  consumer_confidence:{name:'Consumer Confidence',emoji:'😊',type:'positive',weight:10,econEffect:{consumption:0.15},duration:20,cooldown:40,desc:'Consumer confidence is high!',isEconEvent:true},
+  tax_reform:{name:'Tax Reform',emoji:'📜',type:'positive',weight:4,cashPct:0.05,econEffect:{consumption:0.05},duration:0,cooldown:120,desc:'Tax reform benefits your business!',isEconEvent:true}
+};
+
+// ===== GAME STATE =====
+let G = null;
+
+function newGameState(name) {
+  return {
+    playerName: name,
+    cash: 5000,
+    displayCash: 5000,
+    day: 1,
+    xp: 0,
+    level: 1,
+    season: 'spring',
+    weather: 'sun',
+    weatherDaysLeft: 2,
+    economy: {
+      inflation: 0.02,
+      consumption: 1.0,
+      unemployment: 0.05,
+      interestRate: 0.05,
+      rawMaterialCost: 1.0,
+      cycle: 'stable',
+      cycleDaysLeft: 120,
+      targetInflation: 0.02,
+      targetConsumption: 1.0,
+      targetUnemployment: 0.05,
+      targetRawMaterial: 1.0
+    },
+    businesses: [],
+    loans: [],
+    activeEvents: [],
+    eventCooldowns: {},
+    eventLog: [],
+    lastEventDay: 0,
+    negativeStreak: 0,
+    positiveStreak: 0,
+    nextBizId: 1
+  };
+}
+
+// ===== UTILITY =====
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randf(min, max) { return Math.random() * (max - min) + min; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function fmt(n) { return n >= 0 ? '$' + Math.floor(n).toLocaleString() : '-$' + Math.floor(Math.abs(n)).toLocaleString(); }
+
+function weightedRandom(weights) {
+  const entries = Object.entries(weights);
+  const total = entries.reduce((s, [, w]) => s + w, 0);
+  let r = Math.random() * total;
+  for (const [key, w] of entries) {
+    r -= w;
+    if (r <= 0) return key;
+  }
+  return entries[entries.length - 1][0];
+}
+
+// ===== SEASON / WEATHER ENGINE =====
+function getSeason(day) {
+  const d = ((day - 1) % 120);
+  if (d < 30) return 'spring';
+  if (d < 60) return 'summer';
+  if (d < 90) return 'autumn';
+  return 'winter';
+}
+
+function updateWeather() {
+  G.weatherDaysLeft--;
+  if (G.weatherDaysLeft <= 0) {
+    const season = G.season;
+    G.weather = weightedRandom(WEATHER_PROBS[season]);
+    const dur = WEATHER_DURATION[G.weather] || [1, 4];
+    G.weatherDaysLeft = rand(dur[0], dur[1]);
+  }
+}
+
+// ===== ECONOMY ENGINE =====
+function updateEconomy() {
+  const e = G.economy;
+  e.cycleDaysLeft--;
+  if (e.cycleDaysLeft <= 0) {
+    // Transition
+    const transitions = {
+      growth: {growth: 0.3, stable: 0.5, recession: 0.2},
+      stable: {growth: 0.35, stable: 0.35, recession: 0.3},
+      recession: {growth: 0.25, stable: 0.45, recession: 0.3}
+    };
+    e.cycle = weightedRandom(transitions[e.cycle]);
+    e.cycleDaysLeft = rand(60, 180);
+    // Set new targets
+    if (e.cycle === 'growth') {
+      e.targetInflation = randf(0.02, 0.05);
+      e.targetConsumption = randf(1.1, 1.4);
+      e.targetUnemployment = randf(0.02, 0.05);
+      e.targetRawMaterial = randf(0.9, 1.1);
+    } else if (e.cycle === 'recession') {
+      e.targetInflation = randf(-0.01, 0.02);
+      e.targetConsumption = randf(0.6, 0.85);
+      e.targetUnemployment = randf(0.08, 0.15);
+      e.targetRawMaterial = randf(1.1, 1.5);
+    } else {
+      e.targetInflation = randf(0.01, 0.03);
+      e.targetConsumption = randf(0.9, 1.1);
+      e.targetUnemployment = randf(0.04, 0.07);
+      e.targetRawMaterial = randf(0.95, 1.1);
+    }
+  }
+  const t = 0.02;
+  e.inflation = lerp(e.inflation, e.targetInflation, t) + randf(-0.001, 0.001);
+  e.consumption = lerp(e.consumption, e.targetConsumption, t) + randf(-0.005, 0.005);
+  e.unemployment = clamp(lerp(e.unemployment, e.targetUnemployment, t) + randf(-0.002, 0.002), 0, 0.25);
+  e.rawMaterialCost = lerp(e.rawMaterialCost, e.targetRawMaterial, t) + randf(-0.005, 0.005);
+  // Consumption affected by unemployment
+  e.consumption = clamp(e.consumption - e.unemployment * 0.5, 0.3, 2.0);
+  e.interestRate = clamp(e.interestRate, 0.01, 0.15);
+}
+
+// ===== EVENT ENGINE =====
+function tryTriggerEvent() {
+  if (G.activeEvents.length >= 3) return;
+  if (G.day - G.lastEventDay < 3) return;
+  if (Math.random() > 0.30) return;
+
+  const eligible = [];
+  for (const [id, def] of Object.entries(EVENT_DEFS)) {
+    if (G.eventCooldowns[id] && G.eventCooldowns[id] > G.day) continue;
+    if (def.bizTypes && !G.businesses.some(b => def.bizTypes.includes(b.type))) continue;
+    if (def.duration > 0 && G.activeEvents.some(e => e.id === id)) continue;
+
+    let w = def.weight;
+    // Streak balancing
+    if (def.type === 'positive' && G.positiveStreak >= 3) w *= Math.pow(0.9, G.positiveStreak - 2);
+    if (def.type === 'positive' && G.negativeStreak >= 3) w *= 1 + 0.15 * (G.negativeStreak - 2);
+    if (def.type === 'negative' && G.negativeStreak >= 3) w *= Math.pow(0.9, G.negativeStreak - 2);
+    // Poor player protection
+    if (def.type === 'negative' && G.cash < 2500 && (def.cashChange < 0 || def.cashPct < 0)) w *= 0.3;
+
+    if (w > 0) eligible.push({id, weight: w});
+  }
+
+  if (eligible.length === 0) return;
+  const totalW = eligible.reduce((s, e) => s + e.weight, 0);
+  let r = Math.random() * totalW;
+  let chosen = eligible[0].id;
+  for (const e of eligible) {
+    r -= e.weight;
+    if (r <= 0) { chosen = e.id; break; }
+  }
+
+  applyEvent(chosen);
+}
+
+function applyEvent(eventId) {
+  const def = EVENT_DEFS[eventId];
+  G.lastEventDay = G.day;
+  G.eventCooldowns[eventId] = G.day + def.cooldown;
+
+  // Streak tracking
+  if (def.type === 'positive') { G.positiveStreak++; G.negativeStreak = 0; }
+  else if (def.type === 'negative') { G.negativeStreak++; G.positiveStreak = 0; }
+  else { G.positiveStreak = 0; G.negativeStreak = 0; }
+
+  // Instant effects
+  if (def.cashChange) G.cash += def.cashChange;
+  if (def.cashPct) G.cash += G.cash * def.cashPct;
+  if (def.repChange) G.businesses.forEach(b => b.reputation = clamp(b.reputation + def.repChange, 0, 100));
+  if (def.moraleChange) G.businesses.forEach(b => b.morale = clamp(b.morale + def.moraleChange, 0, 100));
+  if (def.econEffect) {
+    for (const [k, v] of Object.entries(def.econEffect)) {
+      if (k in G.economy) G.economy[k] = clamp(G.economy[k] + v, k === 'interestRate' ? 0.01 : -1, k === 'interestRate' ? 0.15 : 3);
+    }
+  }
+
+  // Duration events
+  if (def.duration > 0) {
+    G.activeEvents.push({id: eventId, daysLeft: def.duration});
+  }
+
+  // Log
+  G.eventLog.unshift({day: G.day, id: eventId, name: def.name, emoji: def.emoji, type: def.type, desc: def.desc});
+  if (G.eventLog.length > 100) G.eventLog.pop();
+
+  showToast(`${def.emoji} ${def.name}: ${def.desc}`);
+  G.xp += 5;
+}
+
+function tickActiveEvents() {
+  G.activeEvents = G.activeEvents.filter(e => {
+    e.daysLeft--;
+    return e.daysLeft > 0;
+  });
+}
+
+// ===== REVENUE CALCULATION =====
+function calcDailyRevenue(biz) {
+  const def = BIZ_TYPES[biz.type];
+  const e = G.economy;
+  let rev = def.dailyBaseRevenue;
+
+  // Level bonus
+  rev *= (1 + (biz.level - 1) * 0.2);
+
+  // Weather
+  const wSens = def.weather[G.weather] || 0;
+  rev *= Math.max(0.1, 1 + wSens * 0.1);
+
+  // Season
+  rev *= def.season[G.season] || 1;
+
+  // Economy
+  const consImpact = 1 + (e.consumption - 1) * def.economy.consumption;
+  const unempImpact = 1 - e.unemployment * def.economy.unemployment;
+  rev *= clamp(consImpact, 0.3, 2.5) * clamp(unempImpact, 0.5, 1.5);
+
+  // Employees bonus
+  rev *= (1 + biz.employees * 0.05);
+
+  // Reputation factor
+  rev *= (0.5 + biz.reputation / 100);
+
+  // Price effect
+  rev *= biz.priceMultiplier;
+  // Higher price reduces volume
+  if (biz.priceMultiplier > 1) rev *= (1 - (biz.priceMultiplier - 1) * 0.3);
+  if (biz.priceMultiplier < 1) rev *= (1 + (1 - biz.priceMultiplier) * 0.2);
+
+  // Active event multipliers
+  for (const ae of G.activeEvents) {
+    const aeDef = EVENT_DEFS[ae.id];
+    if (aeDef.revMult !== undefined) rev *= aeDef.revMult;
+  }
+
+  // Random variance +-10%
+  rev *= randf(0.9, 1.1);
+
+  return Math.max(0, rev);
+}
+
+function calcDailyCost(biz) {
+  const def = BIZ_TYPES[biz.type];
+  const e = G.economy;
+  let cost = def.dailyBaseCost;
+
+  // Inflation
+  cost *= (1 + e.inflation * def.economy.inflation);
+
+  // Raw materials
+  cost *= (1 + (e.rawMaterialCost - 1) * def.economy.rawMaterials);
+
+  // Employee salaries
+  cost += biz.employees * 50;
+
+  // Active event cost multipliers
+  for (const ae of G.activeEvents) {
+    const aeDef = EVENT_DEFS[ae.id];
+    if (aeDef.costMult !== undefined) cost *= aeDef.costMult;
+  }
+
+  // Random variance +-5%
+  cost *= randf(0.95, 1.05);
+
+  return cost;
+}
+
+// ===== LOANS =====
+function monthlyPayment(amount, annualRate, months) {
+  const mr = annualRate / 12;
+  if (mr === 0) return amount / months;
+  return (amount * mr) / (1 - Math.pow(1 + mr, -months));
+}
+
+function processLoans() {
+  // Every 30 days
+  if (G.day % 30 !== 0) return;
+  for (let i = G.loans.length - 1; i >= 0; i--) {
+    const loan = G.loans[i];
+    const payment = loan.monthlyPayment;
+    G.cash -= payment;
+    loan.remaining -= payment;
+    loan.monthsPaid++;
+    if (loan.monthsPaid >= loan.months) {
+      G.loans.splice(i, 1);
+    }
+  }
+}
+
+function getMaxDebt() {
+  const monthlyRev = G.businesses.reduce((s, b) => s + calcDailyRevenue(b) * 30, 0);
+  return Math.max(5000, monthlyRev * 3);
+}
+
+function getCurrentDebt() {
+  return G.loans.reduce((s, l) => s + Math.max(0, l.remaining), 0);
+}
+
+// ===== ADVANCE DAY =====
+function advanceDay() {
+  G.day++;
+  G.season = getSeason(G.day);
+  updateWeather();
+  updateEconomy();
+  tryTriggerEvent();
+  tickActiveEvents();
+
+  // Business revenue/costs
+  let totalProfit = 0;
+  for (const biz of G.businesses) {
+    const rev = calcDailyRevenue(biz);
+    const cost = calcDailyCost(biz);
+    const profit = rev - cost;
+    biz.lastRevenue = rev;
+    biz.lastCost = cost;
+    biz.lastProfit = profit;
+    totalProfit += profit;
+
+    // Morale recovery
+    biz.morale = clamp(biz.morale + 0.5, 0, 100);
+  }
+  G.cash += totalProfit;
+
+  processLoans();
+
+  // XP
+  G.xp += G.businesses.length;
+  const xpNeeded = G.level * 100;
+  if (G.xp >= xpNeeded) {
+    G.xp -= xpNeeded;
+    G.level++;
+    showToast('🎉 Level Up! You are now level ' + G.level);
+  }
+
+  renderAll();
+}
+
+function advanceDays(n) {
+  for (let i = 0; i < n; i++) advanceDay();
+}
