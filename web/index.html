@@ -524,3 +524,354 @@ function advanceDay() {
 function advanceDays(n) {
   for (let i = 0; i < n; i++) advanceDay();
 }
+
+// ===== UI RENDERING =====
+let toastTimeout = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// Tab navigation
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+function startGame() {
+  const name = document.getElementById('player-name').value.trim() || 'Tycoon';
+  G = newGameState(name);
+  document.getElementById('start-screen').classList.remove('active');
+  document.getElementById('app').classList.add('active');
+  renderAll();
+}
+
+function renderAll() {
+  renderDashboard();
+  renderBusiness();
+  renderMarket();
+  renderBank();
+  renderEvents();
+  animateCash();
+}
+
+function animateCash() {
+  const target = G.cash;
+  const start = G.displayCash;
+  const diff = target - start;
+  if (Math.abs(diff) < 1) { G.displayCash = target; return; }
+  const steps = 20;
+  let step = 0;
+  const interval = setInterval(() => {
+    step++;
+    G.displayCash = start + diff * (step / steps);
+    const el = document.getElementById('cash-val');
+    if (el) {
+      el.textContent = fmt(G.displayCash);
+      el.className = 'cash-display' + (G.displayCash < 0 ? ' negative' : '');
+    }
+    if (step >= steps) { G.displayCash = target; clearInterval(interval); }
+  }, 20);
+}
+
+function renderDashboard() {
+  const e = G.economy;
+  const cycleEmoji = e.cycle === 'growth' ? '🟢' : e.cycle === 'recession' ? '🔴' : '🟡';
+  const xpNeeded = G.level * 100;
+  const xpPct = Math.min(100, (G.xp / xpNeeded) * 100);
+
+  const activeBadges = G.activeEvents.map(ae => {
+    const def = EVENT_DEFS[ae.id];
+    const cls = def.type === 'positive' ? 'badge-green' : def.type === 'negative' ? 'badge-red' : 'badge-yellow';
+    return `<span class="badge ${cls}">${def.emoji} ${ae.daysLeft}d</span>`;
+  }).join('');
+
+  const totalDailyProfit = G.businesses.reduce((s, b) => s + (b.lastProfit || 0), 0);
+
+  document.getElementById('tab-dashboard').innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:0.8em;color:var(--text2)">Welcome back</div>
+          <div style="font-weight:700;font-size:1.1em">${G.playerName}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.75em;color:var(--text2)">Lvl ${G.level}</div>
+          <div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${xpPct}%;background:var(--accent2)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="cash-val" class="cash-display${G.cash < 0 ? ' negative' : ''}">${fmt(G.displayCash)}</div>
+      <div style="font-size:0.8em;color:var(--text2);margin-top:2px">Daily: <span style="color:${totalDailyProfit >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(totalDailyProfit)}/day</span></div>
+    </div>
+
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:0.8em;color:var(--text2)">Day ${G.day} &middot; ${SEASON_EMOJI[G.season]} ${G.season.charAt(0).toUpperCase() + G.season.slice(1)}</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+          <span class="weather-emoji">${WEATHER_EMOJI[G.weather]}</span>
+          <span style="font-weight:600">${G.weather.charAt(0).toUpperCase() + G.weather.slice(1)}</span>
+          <span style="font-size:0.75em;color:var(--text2)">(${G.weatherDaysLeft}d)</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:0.8em">${cycleEmoji} ${e.cycle.charAt(0).toUpperCase() + e.cycle.slice(1)}</div>
+      </div>
+    </div>
+
+    <div class="economy-strip">
+      <span class="econ-chip">📊 Inflation ${(e.inflation * 100).toFixed(1)}%</span>
+      <span class="econ-chip">🛒 Demand ${(e.consumption * 100).toFixed(0)}%</span>
+      <span class="econ-chip">👥 Unemp ${(e.unemployment * 100).toFixed(1)}%</span>
+      <span class="econ-chip">🏦 Rate ${(e.interestRate * 100).toFixed(1)}%</span>
+    </div>
+
+    ${activeBadges ? `<div class="section-title">Active Events</div><div class="active-events-badges">${activeBadges}</div>` : ''}
+
+    <div class="day-btns">
+      <button class="btn btn-primary" onclick="advanceDay()">Next Day ▶</button>
+      <button class="btn btn-secondary" onclick="advanceDays(7)">Skip 7 ⏩</button>
+    </div>
+  `;
+}
+
+function renderBusiness() {
+  const panel = document.getElementById('tab-business');
+  if (G.businesses.length === 0) {
+    panel.innerHTML = `
+      <div style="text-align:center;padding:60px 20px">
+        <div style="font-size:4em;margin-bottom:16px">🏗️</div>
+        <div style="font-size:1.2em;font-weight:700;margin-bottom:8px">No businesses yet!</div>
+        <div style="color:var(--text2);margin-bottom:20px">Visit the Market to open your first business.</div>
+        <button class="btn btn-primary" onclick="switchTab('market')">Go to Market 🛒</button>
+      </div>`;
+    return;
+  }
+
+  let html = '<div class="section-title">Your Businesses</div>';
+  for (const biz of G.businesses) {
+    const def = BIZ_TYPES[biz.type];
+    const profit = biz.lastProfit || 0;
+    const profitColor = profit >= 0 ? 'var(--green)' : 'var(--red)';
+    const repPct = biz.reputation;
+    const upgradeCost = Math.floor(def.baseCost * 0.5 * biz.level);
+    const hireCost = 200;
+    const stars = '⭐'.repeat(Math.min(biz.level, 5));
+
+    html += `
+    <div class="card">
+      <div class="biz-card">
+        <div class="biz-icon">${BIZ_EMOJI[biz.type]}</div>
+        <div class="biz-info">
+          <div class="biz-name">${biz.name} ${stars}</div>
+          <div class="biz-type">${BIZ_NAMES[biz.type]} &middot; Lvl ${biz.level} &middot; 👥 ${biz.employees}</div>
+          <div class="biz-profit" style="color:${profitColor}">${fmt(profit)}/day</div>
+          <div class="rep-bar">
+            <span style="font-size:0.75em;color:var(--text2)">Rep:</span>
+            <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${repPct}%;background:var(--accent2)"></div></div>
+            <span style="font-size:0.75em">${repPct}%</span>
+          </div>
+          <div class="price-control">
+            <span>Price:</span>
+            <input type="range" min="50" max="200" value="${Math.round(biz.priceMultiplier * 100)}" style="flex:1;accent-color:var(--accent)" onchange="setBizPrice(${biz.id}, this.value)">
+            <span>${Math.round(biz.priceMultiplier * 100)}%</span>
+          </div>
+          <div class="biz-actions">
+            <button class="btn btn-primary" onclick="upgradeBiz(${biz.id})" ${G.cash < upgradeCost ? 'disabled' : ''}>⬆ Upgrade ${fmt(upgradeCost)}</button>
+            <button class="btn btn-success" onclick="hireBiz(${biz.id})" ${G.cash < hireCost ? 'disabled' : ''}>👤 Hire ${fmt(hireCost)}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+  panel.innerHTML = html;
+}
+
+function renderMarket() {
+  let html = '<div class="section-title">Buy a Business</div><div class="market-grid">';
+  for (const [type, def] of Object.entries(BIZ_TYPES)) {
+    const canBuy = G.cash >= def.baseCost;
+    html += `
+    <div class="card market-card" style="${canBuy ? 'cursor:pointer' : 'opacity:0.5'}" ${canBuy ? `onclick="buyBusiness('${type}')"` : ''}>
+      <span class="m-icon">${BIZ_EMOJI[type]}</span>
+      <div class="name">${BIZ_NAMES[type]}</div>
+      <div class="cost">${fmt(def.baseCost)}</div>
+      <div class="rev">~${fmt(def.dailyBaseRevenue - def.dailyBaseCost)}/day</div>
+    </div>`;
+  }
+  html += '</div>';
+  document.getElementById('tab-market').innerHTML = html;
+}
+
+function renderBank() {
+  const maxDebt = getMaxDebt();
+  const currentDebt = getCurrentDebt();
+  const available = Math.max(0, maxDebt - currentDebt);
+
+  let html = `
+    <div class="section-title">Bank</div>
+    <div class="card">
+      <div class="stat-row"><span class="stat-label">Total Debt</span><span style="color:var(--red)">${fmt(currentDebt)}</span></div>
+      <div class="stat-row"><span class="stat-label">Max Borrowing</span><span>${fmt(maxDebt)}</span></div>
+      <div class="stat-row"><span class="stat-label">Available</span><span style="color:var(--green)">${fmt(available)}</span></div>
+      <div class="stat-row"><span class="stat-label">Interest Rate</span><span>${(G.economy.interestRate * 100).toFixed(1)}%</span></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px">Take a Loan</div>
+      <div class="slider-group">
+        <label>Amount: <span class="slider-value" id="loan-amt-val">${fmt(Math.min(5000, available))}</span></label>
+        <input type="range" id="loan-amt" min="1000" max="${Math.max(1000, available)}" step="500" value="${Math.min(5000, available)}" oninput="updateLoanPreview()">
+      </div>
+      <div class="slider-group">
+        <label>Duration: <span class="slider-value" id="loan-dur-val">12 months</span></label>
+        <input type="range" id="loan-dur" min="3" max="36" step="3" value="12" oninput="updateLoanPreview()">
+      </div>
+      <div style="margin:8px 0;font-size:0.9em">Monthly payment: <strong id="loan-payment">${fmt(monthlyPayment(Math.min(5000, available), G.economy.interestRate, 12))}</strong></div>
+      <button class="btn btn-primary" id="loan-btn" onclick="takeLoan()" ${available < 1000 ? 'disabled' : ''}>Take Loan</button>
+    </div>`;
+
+  if (G.loans.length > 0) {
+    html += '<div class="section-title">Active Loans</div>';
+    for (const loan of G.loans) {
+      const pct = (loan.monthsPaid / loan.months) * 100;
+      html += `
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;font-size:0.9em">
+          <span>Loan ${fmt(loan.amount)}</span>
+          <span style="color:var(--red)">${fmt(loan.monthlyPayment)}/mo</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:var(--green)"></div></div>
+        <div style="font-size:0.75em;color:var(--text2)">${loan.monthsPaid}/${loan.months} months &middot; Remaining: ${fmt(Math.max(0, loan.remaining))}</div>
+      </div>`;
+    }
+  }
+
+  document.getElementById('tab-bank').innerHTML = html;
+}
+
+function renderEvents() {
+  let html = '<div class="section-title">Event Log</div>';
+  if (G.eventLog.length === 0) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text2)">No events yet. Keep playing!</div>';
+  } else {
+    for (const ev of G.eventLog) {
+      const cls = ev.type === 'positive' ? 'event-positive' : ev.type === 'negative' ? 'event-negative' : 'event-neutral';
+      html += `
+      <div class="event-item ${cls}">
+        <div class="event-day">Day ${ev.day}</div>
+        <div>${ev.emoji} <strong>${ev.name}</strong></div>
+        <div style="font-size:0.85em;color:var(--text2)">${ev.desc}</div>
+      </div>`;
+    }
+  }
+  document.getElementById('tab-events').innerHTML = html;
+}
+
+// ===== GAME ACTIONS =====
+function switchTab(tab) {
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function buyBusiness(type) {
+  const def = BIZ_TYPES[type];
+  if (G.cash < def.baseCost) return;
+  G.cash -= def.baseCost;
+  G.businesses.push({
+    id: G.nextBizId++,
+    type: type,
+    name: BIZ_NAMES[type] + ' #' + G.businesses.filter(b => b.type === type).length + 1,
+    level: 1,
+    employees: 1,
+    reputation: 50,
+    morale: 70,
+    priceMultiplier: 1.0,
+    lastRevenue: 0,
+    lastCost: 0,
+    lastProfit: 0
+  });
+  G.xp += 20;
+  showToast(`${BIZ_EMOJI[type]} Opened a new ${BIZ_NAMES[type]}!`);
+  switchTab('business');
+  renderAll();
+}
+
+function upgradeBiz(id) {
+  const biz = G.businesses.find(b => b.id === id);
+  if (!biz) return;
+  const def = BIZ_TYPES[biz.type];
+  const cost = Math.floor(def.baseCost * 0.5 * biz.level);
+  if (G.cash < cost) return;
+  G.cash -= cost;
+  biz.level++;
+  G.xp += 15;
+  showToast(`⬆️ ${biz.name} upgraded to level ${biz.level}!`);
+  renderAll();
+}
+
+function hireBiz(id) {
+  const biz = G.businesses.find(b => b.id === id);
+  if (!biz || G.cash < 200) return;
+  G.cash -= 200;
+  biz.employees++;
+  G.xp += 5;
+  showToast(`👤 Hired an employee for ${biz.name}!`);
+  renderAll();
+}
+
+function setBizPrice(id, val) {
+  const biz = G.businesses.find(b => b.id === id);
+  if (biz) {
+    biz.priceMultiplier = parseInt(val) / 100;
+    renderBusiness();
+  }
+}
+
+function updateLoanPreview() {
+  const amt = parseInt(document.getElementById('loan-amt').value);
+  const dur = parseInt(document.getElementById('loan-dur').value);
+  document.getElementById('loan-amt-val').textContent = fmt(amt);
+  document.getElementById('loan-dur-val').textContent = dur + ' months';
+  document.getElementById('loan-payment').textContent = fmt(monthlyPayment(amt, G.economy.interestRate, dur));
+}
+
+function takeLoan() {
+  const amt = parseInt(document.getElementById('loan-amt').value);
+  const dur = parseInt(document.getElementById('loan-dur').value);
+  const maxDebt = getMaxDebt();
+  const currentDebt = getCurrentDebt();
+  if (amt + currentDebt > maxDebt) { showToast('❌ Exceeds maximum debt!'); return; }
+
+  const mp = monthlyPayment(amt, G.economy.interestRate, dur);
+  G.loans.push({
+    amount: amt,
+    rate: G.economy.interestRate,
+    months: dur,
+    monthlyPayment: mp,
+    remaining: mp * dur,
+    monthsPaid: 0
+  });
+  G.cash += amt;
+  showToast(`🏦 Loan of ${fmt(amt)} received!`);
+  renderAll();
+}
+
+// Enter key starts game
+document.getElementById('player-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+</script>
+</body>
+</html>
